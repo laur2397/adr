@@ -699,8 +699,8 @@ portul 3000. `bash .devcontainer/reset-demo.sh` reface baza cu activitatea simul
   mută momentele din toate tabelele la ora simulată și re-înlănțuiește jurnalul de audit, care
   rămâne verificabil. Include: returnări, clarificări cu termen suspendat, sub-flux P2→P4, debite
   cu încasări, acte adiționale, referate și plăți, decizii, petiții fără răspuns (termen depășit),
-  comentarii cu mențiuni, e-mailuri în coadă, un plan de eșantionare, o înlocuire, clasări în arhivă,
-  un token API. Rezultatul ultimei rulări: 305 acțiuni, 0 eșecuri, 74 de dosare, 19 sarcini deschise.
+  comentarii cu mențiuni, e-mailuri în coadă, un plan de eșantionare cu vizitele programate din el, vizite pe teren (conforme, cu recomandări, neconforme cu sesizare P4), o înlocuire, clasări în arhivă,
+  un token API. Rezultatul ultimei rulări: 346 de acțiuni, 0 eșecuri, 86 de dosare (inclusiv 16 vizite pe teren cu fotografii, semnături și toate rezultatele posibile), lanțul de audit intact.
 
 ## 26. Testare
 

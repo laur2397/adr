@@ -1,7 +1,7 @@
 # Flux AM – manual ilustrat al platformei
 
-Prezentarea completă a platformei, ecran cu ecran, pe datele demonstrative: 69 de dosare din toate
-cele 7 circuite, lucrate de 16 utilizatori fictivi între mai și octombrie 2026. Toate capturile
+Prezentarea completă a platformei, ecran cu ecran, pe datele demonstrative: aproximativ 85 de dosare din toate
+cele 8 circuite, lucrate de 16 utilizatori fictivi între mai și octombrie 2026. Toate capturile
 provin din aplicația reală. Instituția, persoanele, beneficiarii și proiectele sunt fictive.
 
 Documentul are două părți:
@@ -20,10 +20,11 @@ Documentul are două părți:
 6. [Celelalte circuite (P2–P7)](#6-celelalte-circuite-p2p7)
 7. [Registre, căutare și corespondență](#7-registre-căutare-și-corespondență)
 8. [Control și evidențe: nereguli, debitori, eșantionare, arhivă](#8-control-și-evidențe)
-9. [Tabloul de bord al conducerii](#9-tabloul-de-bord-al-conducerii)
-10. [Administrare](#10-administrare)
-11. [Contul meu: înlocuitor, 2FA, parolă](#11-contul-meu)
-12. [Utilizatorii demonstrativi](#12-utilizatorii-demonstrativi)
+9. [Vizite pe teren: de la eșantion la raport, pe telefon](#9-vizite-pe-teren)
+10. [Tabloul de bord al conducerii](#10-tabloul-de-bord-al-conducerii)
+11. [Administrare](#11-administrare)
+12. [Contul meu: înlocuitor, 2FA, parolă](#12-contul-meu)
+13. [Utilizatorii demonstrativi](#13-utilizatorii-demonstrativi)
 
 ---
 
@@ -57,13 +58,14 @@ Circuitele livrate:
 | P5 | Registratură generală, corespondență, petiții, Legea 544 | registratură, director, persoana desemnată, șef |
 | P6 | Referat de necesitate, angajare și ordonanțare la plată | compartimentul inițiator, șef, CFPP, director, contabil |
 | P7 | Decizii ale directorului | inițiator, șef compartiment, consilier juridic, director |
+| P8 | Verificare la fața locului (vizite pe teren) | șef serviciu monitorizare, expert monitorizare (pe telefon), director |
 
 ## 2. Autentificarea și navigarea
 
 <figure><img src="img/01-autentificare.png"><figcaption>Figura 1. Ecranul de autentificare. Pentru demonstrație parola tuturor utilizatorilor este <code>Demo-parola-2026</code>.</figcaption></figure>
 
 Autentificarea se face cu utilizator și parolă. Opțional, se poate cere și un cod din aplicația de
-autentificare pe telefon (2FA, secțiunea 11). Sesiunea expiră după 10 ore.
+autentificare pe telefon (2FA, secțiunea 12). Sesiunea expiră după 10 ore.
 
 După autentificare, ecranul are trei zone, vizibile în toate capturile următoare:
 
@@ -280,9 +282,83 @@ proiectului (10%). Dosarele peste prag intră automat, restul se aleg aleator po
 
 Eliminarea cere decizia comisiei de selecționare și avizul Arhivelor Naționale (Legea 16/1996).
 
-## 9. Tabloul de bord al conducerii
+## 9. Vizite pe teren
 
-<figure><img src="img/05-tablou-de-bord.png"><figcaption>Figura 42. Tabloul de bord: dosare și termene în curs, termene depășite, procentul de termene respectate, sarcini nemișcate de peste 5 zile, volumul pe expert, cozile comune, termenele pe tipuri, timpul mediu pe fiecare pas și blocajele.</figcaption></figure>
+Verificările la fața locului (art. 74 alin. 2 din Regulamentul (UE) 2021/1060) au un circuit
+propriu, P8, și o pagină făcută pentru telefon sau tabletă, care funcționează și fără semnal.
+
+### 9.1. De la eșantion la vizite programate
+
+În planul de eșantionare salvat, șeful de serviciu sau directorul apasă **„Programează vizitele”**.
+Pentru fiecare dosar selectat se deschide un dosar de verificare la fața locului, cu proiectul,
+beneficiarul, motivul („Eșantion – risc ridicat” sau „Eșantion – selecție aleatorie”) și cererea
+verificată deja completate. Coloana „Vizită” arată stadiul fiecăreia. O vizită se poate deschide și
+la cerere, din Dosar nou.
+
+<figure><img src="img/71-esantionare-vizite.png"><figcaption>Figura 42. Planul de eșantionare cu vizitele deschise: fiecare dosar selectat are acum o vizită, cu stadiul ei („Programarea vizitei”, „Vizita la fața locului” etc.).</figcaption></figure>
+
+La programare se completează data, adresa locului de implementare și persoana de contact. Cu
+„Programează și notifică beneficiarul”, aplicația generează notificarea, o înregistrează la ieșire,
+o trimite pe e-mail și alocă numărul din Registrul verificărilor la fața locului.
+
+### 9.2. Lista vizitelor
+
+<figure><img src="img/70-vizite-lista.png"><figcaption>Figura 43. Vizite pe teren: data programată sau efectuată, beneficiarul, locul, inspectorul, stadiul, numărul de fotografii, semnătura și rezultatul, cu indicatori pentru vizitele în curs, efectuate luna aceasta, cu recomandări și neconforme. Expertul vede butonul „Pe teren” la vizitele sale.</figcaption></figure>
+
+### 9.3. Pe telefon, la beneficiar
+
+Expertul deschide vizita de pe telefon (Vizite pe teren → „Pe teren”, sau butonul „Deschide modul
+de teren” din dosar). Pagina se poate adăuga pe ecranul telefonului, ca o aplicație.
+
+<figure><img src="img/72-telefon-pornire.png"><figcaption>Figura 44. Pe telefon: lista vizitelor; declarația privind conflictul de interese și preluarea vizitei; apoi lucrul fără semnal (eticheta „fără semnal”, modificările rămân pe dispozitiv și se trimit când revine semnalul).</figcaption></figure>
+
+Ce face expertul la fața locului:
+
+- **lista de verificare** (12 puncte), cu butoane mari Da / Nu / N/A; observația devine
+  obligatorie unde lista o cere (de exemplu la un „Nu”);
+- **fotografii** direct din cameră sau din galerie, cu o descriere. Fiecare fotografie primește
+  ora și **poziția GPS** a telefonului și este micșorată pe dispozitiv, ca să se trimită repede;
+- **constatările**, rezultatul (conform / conform cu recomandări / neconform), recomandările și
+  termenul lor;
+- **semnătura reprezentantului beneficiarului**, desenată pe ecran cu degetul, cu numele lui.
+
+<figure><img src="img/73-telefon-lucru.png"><figcaption>Figura 45. Lista de verificare completată (punctul 9 cu „Nu” și observație), fotografiile cu ora și coordonatele GPS (marcate „pe dispozitiv” până la trimitere) și semnătura reprezentantului.</figcaption></figure>
+
+**Fără semnal:** totul se salvează pe telefon. Pagina se redeschide și fără semnal, cu toate
+datele introduse. Când revine semnalul, modificările se trimit singure, în ordine. Dacă serverul
+refuză o modificare, aceasta rămâne afișată cu motivul și poate fi reîncercată sau abandonată.
+
+<figure><img src="img/74-telefon-sincronizat.png" style="max-height: 150mm"><figcaption>Figura 46. Semnalul a revenit: „Totul este salvat pe server”. Butonul „Semnează raportul și trimite la avizare” generează raportul, îl semnează și îl trimite șefului de serviciu.</figcaption></figure>
+
+Raportul nu poate fi trimis fără cel puțin o fotografie, fără semnătura reprezentantului, cu lista
+de verificare incompletă sau fără recomandări și termen, atunci când rezultatul nu este „conform”.
+
+### 9.4. Raportul, cu fotografiile în anexă
+
+<figure><img src="img/77-raport-vizita.png"><figcaption>Figura 47. Raportul de verificare la fața locului generat de aplicație (prima pagină și prima pagină a anexei): datele vizitei, lista de verificare, constatările, rezultatul și recomandările; în anexă fiecare fotografie cu data, ora, coordonatele GPS, autorul și amprenta, apoi semnătura reprezentantului.</figcaption></figure>
+
+### 9.5. În dosar: fotografii, semnătură, rezultat
+
+<figure><img src="img/76-vizita-galerie.png"><figcaption>Figura 48. Fila „Fotografii și semnătură” a unei vizite încheiate cu recomandări: fotografiile se măresc la clic, iar fiecare poziție GPS se deschide pe hartă. Bara circuitului arată și urmărirea recomandărilor.</figcaption></figure>
+
+<figure><img src="img/75-vizita-formular.png"><figcaption>Figura 49. Datele vizitei: motivul, cererea verificată, locul, data, reprezentantul, constatările, rezultatul, recomandările cu termen și stadiul implementării lor.</figcaption></figure>
+
+După aprobarea directorului, raportul se înregistrează la ieșire și se trimite beneficiarului.
+Mai departe, circuitul depinde de rezultat:
+
+- **conform**: dosarul se închide;
+- **conform, cu recomandări**: expertul urmărește implementarea până la termen. Dacă recomandările
+  nu sunt implementate, poate sesiza neregula din același pas;
+- **neconform**: se deschide automat un dosar de nereguli (P4), precompletat cu sursa „vizită la
+  fața locului” și cu constatările.
+
+<figure><img src="img/78-vizita-neconforma.png"><figcaption>Figura 50. O vizită neconformă: bara circuitului se încheie cu „Finalizat – sesizare nereguli”, iar banda albastră duce la dosarul de nereguli deschis automat.</figcaption></figure>
+
+<figure><img src="img/79-p8-diagrama-a4.png"><figcaption>Figura 51. Circuitul P8: programare, notificare, vizită, avizare, aprobare, comunicare, apoi încheiere, urmărirea recomandărilor sau sesizare către nereguli. Liniile portocalii întrerupte sunt returnările (inclusiv reprogramarea unei vizite care nu a putut avea loc).</figcaption></figure>
+
+## 10. Tabloul de bord al conducerii
+
+<figure><img src="img/05-tablou-de-bord.png"><figcaption>Figura 52. Tabloul de bord: dosare și termene în curs, termene depășite, procentul de termene respectate, sarcini nemișcate de peste 5 zile, volumul pe expert, cozile comune, termenele pe tipuri, timpul mediu pe fiecare pas și blocajele.</figcaption></figure>
 
 Directorul, administratorul funcțional și auditorul văd **tot ce au lucrat cei din subordine**:
 
@@ -293,42 +369,42 @@ Directorul, administratorul funcțional și auditorul văd **tot ce au lucrat ce
 
 Din orice dosar, directorul poate deschide istoricul, documentele, semnăturile și jurnalul de audit.
 
-## 10. Administrare
+## 11. Administrare
 
 ### 10.1. Utilizatori și roluri
 
-<figure><img src="img/50-admin-utilizatori.png"><figcaption>Figura 43. Utilizatori și roluri: departament, roluri active (pot fi limitate la un departament sau program și la o perioadă), starea 2FA, adăugarea de roluri și dezactivarea.</figcaption></figure>
+<figure><img src="img/50-admin-utilizatori.png"><figcaption>Figura 53. Utilizatori și roluri: departament, roluri active (pot fi limitate la un departament sau program și la o perioadă), starea 2FA, adăugarea de roluri și dezactivarea.</figcaption></figure>
 
 ### 10.2. Termene și calendar
 
-<figure><img src="img/51-admin-termene.png"><figcaption>Figura 44. Definițiile de termen: durata în zile lucrătoare sau calendaristice, momentul de pornire, regula de suspendare, temeiul legal și starea „de validat juridic”. Orice modificare readuce termenul în această stare până la confirmarea consilierului juridic.</figcaption></figure>
+<figure><img src="img/51-admin-termene.png"><figcaption>Figura 54. Definițiile de termen: durata în zile lucrătoare sau calendaristice, momentul de pornire, regula de suspendare, temeiul legal și starea „de validat juridic”. Orice modificare readuce termenul în această stare până la confirmarea consilierului juridic.</figcaption></figure>
 
-<figure><img src="img/52-admin-calendar.png"><figcaption>Figura 45. Calendarul zilelor lucrătoare: sărbătorile legale ale anului, folosite la calculul tuturor termenelor.</figcaption></figure>
+<figure><img src="img/52-admin-calendar.png"><figcaption>Figura 55. Calendarul zilelor lucrătoare: sărbătorile legale ale anului, folosite la calculul tuturor termenelor.</figcaption></figure>
 
 ### 10.3. Procese, liste de verificare, șabloane
 
-<figure><img src="img/53-admin-procese.png"><figcaption>Figura 46. Definițiile de proces, versionate. O versiune publicată nu se mai modifică. Dosarele pornite rămân pe versiunea cu care au început. Editorul arată definiția, diagrama și rezultatul validării.</figcaption></figure>
+<figure><img src="img/53-admin-procese.png"><figcaption>Figura 56. Definițiile de proces, versionate. O versiune publicată nu se mai modifică. Dosarele pornite rămân pe versiunea cu care au început. Editorul arată definiția, diagrama și rezultatul validării.</figcaption></figure>
 
-<figure><img src="img/54-admin-liste.png"><figcaption>Figura 47. Listele de verificare: întrebările, temeiul legal și răspunsurile pentru care observația este obligatorie.</figcaption></figure>
+<figure><img src="img/54-admin-liste.png"><figcaption>Figura 57. Listele de verificare: întrebările, temeiul legal și răspunsurile pentru care observația este obligatorie.</figcaption></figure>
 
-<figure><img src="img/55-admin-sabloane.png"><figcaption>Figura 48. Șabloanele de documente (Word), cu versiune și amprentă. O versiune nouă se încarcă direct din pagină, iar etichetele disponibile sunt afișate dedesubt.</figcaption></figure>
+<figure><img src="img/55-admin-sabloane.png"><figcaption>Figura 58. Șabloanele de documente (Word), cu versiune și amprentă. O versiune nouă se încarcă direct din pagină, iar etichetele disponibile sunt afișate dedesubt.</figcaption></figure>
 
 ### 10.4. Import, integrări, audit
 
-<figure><img src="img/56-admin-import.png"><figcaption>Figura 49. Importul proiectelor și contractelor din Excel (foile Proiecte și Linii bugetare). Beneficiarii noi se completează automat din ANAF.</figcaption></figure>
+<figure><img src="img/56-admin-import.png"><figcaption>Figura 59. Importul proiectelor și contractelor din Excel (foile Proiecte și Linii bugetare). Beneficiarii noi se completează automat din ANAF.</figcaption></figure>
 
-<figure><img src="img/57-admin-integrari.png"><figcaption>Figura 50. Integrări: tokenuri API pentru Power BI sau alte sisteme (aici „Power BI – raportare conducere”, care acționează ca auditorul) și webhook-uri semnate pentru evenimentele principale.</figcaption></figure>
+<figure><img src="img/57-admin-integrari.png"><figcaption>Figura 60. Integrări: tokenuri API pentru Power BI sau alte sisteme (aici „Power BI – raportare conducere”, care acționează ca auditorul) și webhook-uri semnate pentru evenimentele principale.</figcaption></figure>
 
-<figure><img src="img/58-admin-audit.png"><figcaption>Figura 51. Jurnalul de audit global, filtrat după acțiunea „instance.transition”. Butonul „Verifică lanțul” confirmă integritatea: „Lanțul de hash-uri este intact: 2328 evenimente”.</figcaption></figure>
+<figure><img src="img/58-admin-audit.png"><figcaption>Figura 61. Jurnalul de audit global, filtrat după acțiunea „instance.transition”. Butonul „Verifică lanțul” confirmă integritatea: „Lanțul de hash-uri este intact: 2328 evenimente”.</figcaption></figure>
 
-## 11. Contul meu
+## 12. Contul meu
 
-<figure><img src="img/59-contul-meu.png"><figcaption>Figura 52. Contul meu: înlocuitorul în concediu (perioadă și drepturi, aici Maria Dumitrescu îl înlocuiește pe Andrei Ionescu), activarea autentificării în doi pași și schimbarea parolei.</figcaption></figure>
+<figure><img src="img/59-contul-meu.png"><figcaption>Figura 62. Contul meu: înlocuitorul în concediu (perioadă și drepturi, aici Maria Dumitrescu îl înlocuiește pe Andrei Ionescu), activarea autentificării în doi pași și schimbarea parolei.</figcaption></figure>
 
 Înlocuitorul vede și finalizează sarcinile titularului în perioada stabilită. Acțiunile se
 înregistrează „în numele” titularului, atât în dosar, cât și în jurnalul de audit.
 
-## 12. Utilizatorii demonstrativi
+## 13. Utilizatorii demonstrativi
 
 Parola tuturor: `Demo-parola-2026`.
 
@@ -339,9 +415,9 @@ Parola tuturor: `Demo-parola-2026`.
 | `auditor` | Victor Matei | Auditor (citire) | toate dosarele și jurnalul de audit |
 | `registratura` | Ioana Pop | Inspector registratură | registre, coada de e-mail, dosar nou |
 | `evf1`, `evf2` | Andrei Ionescu, Maria Dumitrescu | Expert verificare financiară | sarcini cu termen depășit, clarificări, declarația CI |
-| `ei1` | Radu Constantin | Expert monitorizare | verificarea tehnică, acte adiționale |
+| `ei1` | Radu Constantin | Expert monitorizare | verificarea tehnică, acte adiționale, vizitele pe teren (pe telefon) |
 | `achizitii1` | Elena Stan | Expert achiziții | verificarea achizițiilor |
-| `sef.svf`, `sef.sva`, `sef.sm`, `sef.sn`, `sef.fc` | Cristina Marin, Mihai Georgescu, Laura Enache, Irina Toma, Paul Neagu | Șefi de serviciu | avizări, semnături |
+| `sef.svf`, `sef.sva`, `sef.sm`, `sef.sn`, `sef.fc` | Cristina Marin, Mihai Georgescu, Laura Enache, Irina Toma, Paul Neagu | Șefi de serviciu | avizări, semnături; `sef.sm` programează vizitele din eșantion |
 | `cfpp` | Dan Popescu | CFPP | vizele de control financiar preventiv |
 | `juridic` | Ana Nistor | Consilier juridic | avizele de legalitate, validarea termenelor |
 | `nereguli` | Bogdan Rusu | Ofițer nereguli | constatări, petiții |
