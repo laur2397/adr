@@ -10,3 +10,4 @@ for i in $(seq 1 60); do
   echo "astept baza de date..."; sleep 2
 done
 SEED_DEMO=true ADMIN_PASSWORD=Demo-parola-2026 ORG_NAME="ADR Demo (date fictive)" pnpm --filter @flux/api seed
+touch .devcontainer/.setup-done

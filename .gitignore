@@ -11,3 +11,4 @@ storage/
 deploy/.env
 deploy/.env.*
 !deploy/.env.example
+.devcontainer/.setup-done
