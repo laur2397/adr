@@ -143,6 +143,10 @@
               "$ref": "#/$defs/key"
             },
             "description": "step keys whose entry stops the clock (met)"
+          },
+          "when": {
+            "$ref": "#/$defs/jsonLogic",
+            "description": "start the deadline only when this condition holds"
           }
         }
       }
@@ -584,6 +588,11 @@
           "items": {
             "$ref": "#/$defs/action"
           }
+        },
+        "validateFields": {
+          "type": "boolean",
+          "default": true,
+          "description": "false skips the step's required-field checks (e.g. asking for clarifications before the findings are written)"
         }
       }
     },

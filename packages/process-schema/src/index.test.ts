@@ -1,12 +1,16 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { computeCalculated, evaluate, fieldAccess, validateDefinition, validateForStep, type ProcessDefinition } from './index.js';
 
-const p1 = JSON.parse(readFileSync(new URL('../../../examples/process-p1.json', import.meta.url), 'utf8'));
+const p1 = JSON.parse(readFileSync(new URL('../../../processes/p1/process.json', import.meta.url), 'utf8'));
+
+const processesDir = new URL('../../../processes/', import.meta.url);
+const packages = readdirSync(processesDir).filter((d) => !d.includes('.'));
 
 describe('validateDefinition', () => {
-  it('accepts the P1 package', () => {
-    const r = validateDefinition(p1);
+  it.each(packages)('accepts the %s package', (dir) => {
+    const def = JSON.parse(readFileSync(new URL(`${dir}/process.json`, processesDir), 'utf8'));
+    const r = validateDefinition(def);
     expect(r.ok ? [] : r.problems).toEqual([]);
   });
 

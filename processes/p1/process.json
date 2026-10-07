@@ -6,10 +6,8 @@
   "subject": {
     "requires": [
       "project",
-      "beneficiary",
-      "register_entry"
-    ],
-    "titleTemplate": "{{fields.request_type_label}} {{fields.request_no}} - SMIS {{project.smis_code}}"
+      "beneficiary"
+    ]
   },
   "fields": [
     {
@@ -335,7 +333,8 @@
         "submitted_at": "required",
         "double_check": "editable",
         "expenses": "hidden",
-        "findings": "hidden"
+        "findings": "hidden",
+        "beneficiary_iban": "editable"
       },
       "paths": [
         {
@@ -431,12 +430,6 @@
               },
               "message": "Totalul eligibil depășește totalul solicitat. Verificați liniile de cheltuieli."
             }
-          ],
-          "actions": [
-            {
-              "type": "generate_document",
-              "document": "verification_note"
-            }
           ]
         },
         {
@@ -452,7 +445,8 @@
               },
               "message": "Completați solicitările de clarificări înainte de a trimite scrisoarea."
             }
-          ]
+          ],
+          "validateFields": false
         }
       ]
     },
@@ -540,7 +534,8 @@
       "type": "human",
       "name": "Avizare șef serviciu",
       "assignment": {
-        "rule": "department_head"
+        "rule": "department_head",
+        "step": "evf_check"
       },
       "fieldAccess": {
         "expenses": "visible",

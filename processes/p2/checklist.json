@@ -1,0 +1,20 @@
+{
+  "key": "p2_procurement",
+  "name": "Lista de verificare a dosarului de achiziție (model)",
+  "answerSet": ["DA", "DA_CU_OBS", "NU", "NA"],
+  "note": "MODEL cu 12 puncte generale. Lista oficială de 55 de puncte (Anexa 06) se încarcă după ce este pusă la dispoziție (întrebarea deschisă 11).",
+  "items": [
+    { "code": "1", "question": "Achiziția este prevăzută în planul de achiziții al proiectului?", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "2", "question": "Procedura aplicată corespunde valorii estimate și pragurilor legale?", "legalBasis": "Legea 98/2016", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "3", "question": "Valoarea estimată a fost stabilită corect și fundamentat?", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "4", "question": "Nu există divizarea artificială a achiziției?", "legalBasis": "Legea 98/2016", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "5", "question": "Documentația de atribuire / cererea de oferte conține specificații nediscriminatorii?", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "6", "question": "Anunțul / invitația a fost publicat(ă) cu respectarea termenelor minime?", "legalBasis": "HG 395/2016", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "7", "question": "Criteriile de calificare și selecție sunt legale și proporționale?", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "8", "question": "Evaluarea ofertelor respectă criteriul de atribuire anunțat?", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "9", "question": "Declarațiile privind evitarea conflictului de interese sunt completate de toți membrii comisiei?", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "10", "question": "Contestațiile (dacă au existat) au fost soluționate înainte de semnarea contractului?", "legalBasis": "Legea 101/2016", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "11", "question": "Contractul semnat corespunde ofertei câștigătoare și documentației de atribuire?", "observationRequiredOn": ["DA_CU_OBS", "NU"] },
+    { "code": "12", "question": "Modificările contractului (acte adiționale) respectă condițiile legale?", "observationRequiredOn": ["DA_CU_OBS", "NU"] }
+  ]
+}

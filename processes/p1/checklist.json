@@ -1,0 +1,16 @@
+{
+  "key": "p1_default",
+  "name": "Lista de verificare a cererii de rambursare / plată / prefinanțare",
+  "answerSet": ["DA", "NU", "NA"],
+  "note": "Lista implicită din specificație. Se înlocuiește cu lista folosită de ADR-ul pilot (întrebarea deschisă 1).",
+  "items": [
+    { "code": "1", "question": "Cererea a fost depusă în termenul prevăzut în contractul de finanțare / graficul de rambursare?" },
+    { "code": "2", "question": "Sumele solicitate se încadrează în bugetul proiectului și pe liniile bugetare aprobate?" },
+    { "code": "3", "question": "Documentele justificative sunt complete și lizibile (facturi, contracte, procese-verbale de recepție)?" },
+    { "code": "4", "question": "Plățile sunt dovedite prin extrase de cont / ordine de plată?", "observationRequiredOn": ["NU", "NA"] },
+    { "code": "5", "question": "Achizițiile aferente cheltuielilor au fost verificate și avizate?" },
+    { "code": "6", "question": "S-a verificat lipsa dublei finanțări pentru cheltuielile solicitate?" },
+    { "code": "7", "question": "Activitățile au fost realizate conform raportului de progres?" },
+    { "code": "8", "question": "Sunt respectate regulile de eligibilitate a cheltuielilor (perioadă, natură, plafoane)?" }
+  ]
+}

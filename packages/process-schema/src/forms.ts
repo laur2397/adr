@@ -13,10 +13,10 @@ export interface FieldError {
 
 export interface RuleContext {
   fields: FieldValues;
-  project?: Record<string, unknown> | null;
-  beneficiary?: Record<string, unknown> | null;
-  instance?: Record<string, unknown> | null;
-  user?: Record<string, unknown> | null;
+  project?: object | null;
+  beneficiary?: object | null;
+  instance?: object | null;
+  user?: object | null;
 }
 
 export function findStep(def: ProcessDefinition, key: string): StepDef {

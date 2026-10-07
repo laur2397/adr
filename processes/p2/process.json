@@ -1,0 +1,314 @@
+{
+  "schemaVersion": 1,
+  "key": "p2_procurement_check",
+  "name": "Verificarea dosarului de achiziție al beneficiarului",
+  "description": "Pachetul P2. Lista de verificare implicită este un model; reducerea procentuală propusă se aplică după aprobare.",
+  "subject": {
+    "requires": [
+      "project",
+      "beneficiary"
+    ]
+  },
+  "fields": [
+    {
+      "key": "procurement_object",
+      "label": "Obiectul achiziției",
+      "type": "text"
+    },
+    {
+      "key": "procedure_type",
+      "label": "Procedura de atribuire",
+      "type": "choice",
+      "nomenclature": "procedure_type"
+    },
+    {
+      "key": "contract_value",
+      "label": "Valoarea contractului (fără TVA)",
+      "type": "amount"
+    },
+    {
+      "key": "supplier_name",
+      "label": "Contractant",
+      "type": "text"
+    },
+    {
+      "key": "supplier_cui",
+      "label": "CUI contractant",
+      "type": "text",
+      "format": "cui"
+    },
+    {
+      "key": "smis_code",
+      "label": "Cod SMIS",
+      "type": "text",
+      "format": "smis_code",
+      "prefill": {
+        "from": "project",
+        "path": "smis_code"
+      }
+    },
+    {
+      "key": "beneficiary_name",
+      "label": "Beneficiar",
+      "type": "text",
+      "prefill": {
+        "from": "beneficiary",
+        "path": "name"
+      }
+    },
+    {
+      "key": "findings",
+      "label": "Constatări",
+      "type": "textarea"
+    },
+    {
+      "key": "correction_percent",
+      "label": "Reducere procentuală propusă (%)",
+      "type": "percent",
+      "min": 0,
+      "max": 100
+    },
+    {
+      "key": "correction_amount",
+      "label": "Valoarea reducerii propuse",
+      "type": "calculated",
+      "resultType": "amount",
+      "formula": {
+        "amount_add": [
+          {
+            "*": [
+              {
+                "var": "fields.contract_value"
+              },
+              {
+                "/": [
+                  {
+                    "var": "fields.correction_percent"
+                  },
+                  100
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "key": "verdict",
+      "label": "Aviz",
+      "type": "choice",
+      "nomenclature": "procurement_verdict"
+    }
+  ],
+  "checklists": [
+    {
+      "key": "procurement",
+      "template": "p2_procurement"
+    }
+  ],
+  "documents": [
+    {
+      "key": "procurement_note",
+      "template": "p2_procurement_note",
+      "docType": "procurement_verification_note",
+      "signatureLevel": "qualified"
+    }
+  ],
+  "deadlines": [
+    {
+      "key": "procurement_check",
+      "definition": "procurement_check_internal",
+      "stopsAt": [
+        "director_approval"
+      ]
+    }
+  ],
+  "separationOfDuties": [
+    {
+      "steps": [
+        "procurement_check",
+        "head_review"
+      ],
+      "message": "Cel care a verificat dosarul nu îl poate aviza."
+    }
+  ],
+  "steps": [
+    {
+      "key": "registration",
+      "type": "start",
+      "name": "Înregistrare",
+      "fieldAccess": {
+        "procurement_object": "required",
+        "procedure_type": "required",
+        "contract_value": "required",
+        "supplier_name": "required",
+        "supplier_cui": "editable",
+        "findings": "hidden",
+        "correction_percent": "hidden",
+        "correction_amount": "hidden",
+        "verdict": "hidden"
+      },
+      "paths": [
+        {
+          "key": "register",
+          "label": "Înregistrează și repartizează",
+          "to": "procurement_check",
+          "actions": [
+            {
+              "type": "register",
+              "register": "general",
+              "direction": "in"
+            }
+          ]
+        },
+        {
+          "key": "cancel",
+          "label": "Anulează",
+          "to": "cancelled",
+          "kind": "reject",
+          "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "procurement_check",
+      "type": "human",
+      "name": "Verificare achiziție",
+      "assignment": {
+        "rule": "least_loaded",
+        "role": "procurement_expert"
+      },
+      "checklist": "procurement",
+      "fieldAccess": {
+        "findings": "required",
+        "correction_percent": "editable",
+        "verdict": "required",
+        "procurement_object": "editable",
+        "contract_value": "editable"
+      },
+      "onEnter": [
+        {
+          "type": "generate_document",
+          "document": "procurement_note"
+        }
+      ],
+      "paths": [
+        {
+          "key": "submit",
+          "label": "Trimite la șeful de serviciu",
+          "to": "head_review",
+          "requiresChecklistComplete": "procurement",
+          "requiresSignatures": [
+            "procurement_note"
+          ],
+          "validations": [
+            {
+              "rule": {
+                "or": [
+                  {
+                    "!=": [
+                      {
+                        "var": "fields.verdict"
+                      },
+                      "aviz_cu_corectie"
+                    ]
+                  },
+                  {
+                    ">": [
+                      {
+                        "var": "fields.correction_percent"
+                      },
+                      0
+                    ]
+                  }
+                ]
+              },
+              "message": "Pentru avizul cu corecție completați reducerea procentuală propusă."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "head_review",
+      "type": "human",
+      "name": "Avizare șef serviciu",
+      "assignment": {
+        "rule": "department_head",
+        "step": "procurement_check"
+      },
+      "paths": [
+        {
+          "key": "endorse",
+          "label": "Avizează",
+          "to": "director_approval",
+          "requiresSignatures": [
+            "procurement_note"
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează la expert",
+          "to": "procurement_check",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "director_approval",
+      "type": "human",
+      "name": "Aprobare director",
+      "assignment": {
+        "rule": "role_queue",
+        "role": "director"
+      },
+      "paths": [
+        {
+          "key": "approve",
+          "label": "Aprobă și semnează",
+          "to": "register_procurement",
+          "requiresSignatures": [
+            "procurement_note"
+          ],
+          "actions": [
+            {
+              "type": "register",
+              "register": "general",
+              "direction": "out",
+              "document": "procurement_note"
+            }
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează",
+          "to": "head_review",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "register_procurement",
+      "type": "system",
+      "name": "Înregistrare în registrul achizițiilor",
+      "onEnter": [
+        {
+          "type": "register",
+          "register": "procurements",
+          "direction": "internal"
+        }
+      ],
+      "next": "done"
+    },
+    {
+      "key": "done",
+      "type": "end_positive",
+      "name": "Finalizat"
+    },
+    {
+      "key": "cancelled",
+      "type": "end_negative",
+      "name": "Anulat"
+    }
+  ]
+}

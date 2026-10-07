@@ -3,8 +3,8 @@
 -- Conventions: snake_case, uuid primary keys (except append-only logs), timestamptz everywhere,
 -- money as numeric(18,2) in RON, every business table carries organization_id (see assumption A1).
 
-create extension if not exists pgcrypto;   -- gen_random_uuid(), digest()
-create extension if not exists unaccent;    -- Romanian full-text search without diacritics
+create extension if not exists pgcrypto with schema public;   -- gen_random_uuid(), digest()
+create extension if not exists unaccent with schema public;    -- Romanian full-text search without diacritics
 
 create schema if not exists flux;
 set search_path = flux, public;

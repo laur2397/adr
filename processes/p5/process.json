@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "key": "p5_correspondence",
+  "name": "Registratură generală și corespondență",
+  "description": "Pachetul P5: intrare, rezoluție, repartizare, răspuns semnat, clasare. Termenele OG 27/2002 și Legea 544/2001 sunt configurabile și marcate de validat juridic.",
+  "subject": {
+    "requires": []
+  },
+  "fields": [
+    {
+      "key": "subject",
+      "label": "Conținut pe scurt",
+      "type": "textarea"
+    },
+    {
+      "key": "sender_name",
+      "label": "Emitent",
+      "type": "text"
+    },
+    {
+      "key": "category",
+      "label": "Categorie",
+      "type": "choice",
+      "nomenclature": "correspondence_category"
+    },
+    {
+      "key": "resolution",
+      "label": "Rezoluție",
+      "type": "textarea"
+    },
+    {
+      "key": "reply_summary",
+      "label": "Răspuns (rezumat)",
+      "type": "textarea"
+    },
+    {
+      "key": "reply_needed",
+      "label": "Necesită răspuns",
+      "type": "boolean",
+      "prefill": {
+        "from": "constant",
+        "value": true
+      }
+    },
+    {
+      "key": "extension_requested",
+      "label": "Prelungire termen (petiții)",
+      "type": "boolean",
+      "prefill": {
+        "from": "constant",
+        "value": false
+      }
+    }
+  ],
+  "documents": [
+    {
+      "key": "reply_letter",
+      "template": "p5_reply_letter",
+      "docType": "reply_letter",
+      "signatureLevel": "qualified"
+    }
+  ],
+  "deadlines": [
+    {
+      "key": "petition",
+      "definition": "petition_og27",
+      "stopsAt": [
+        "dispatch",
+        "file_without_reply"
+      ],
+      "when": {
+        "==": [
+          {
+            "var": "fields.category"
+          },
+          "petitie"
+        ]
+      }
+    },
+    {
+      "key": "foia",
+      "definition": "foia_544",
+      "stopsAt": [
+        "dispatch",
+        "file_without_reply"
+      ],
+      "when": {
+        "==": [
+          {
+            "var": "fields.category"
+          },
+          "informatii_544"
+        ]
+      }
+    },
+    {
+      "key": "general",
+      "definition": "correspondence_general",
+      "stopsAt": [
+        "dispatch",
+        "file_without_reply"
+      ],
+      "when": {
+        "==": [
+          {
+            "var": "fields.category"
+          },
+          "corespondenta"
+        ]
+      }
+    }
+  ],
+  "separationOfDuties": [],
+  "steps": [
+    {
+      "key": "registration",
+      "type": "start",
+      "name": "Înregistrare",
+      "fieldAccess": {
+        "subject": "required",
+        "sender_name": "required",
+        "category": "required",
+        "resolution": "hidden",
+        "reply_summary": "hidden"
+      },
+      "paths": [
+        {
+          "key": "send",
+          "label": "Trimite la rezoluție",
+          "to": "resolution"
+        }
+      ]
+    },
+    {
+      "key": "resolution",
+      "type": "human",
+      "name": "Rezoluție conducere",
+      "assignment": {
+        "rule": "role_queue",
+        "role": "director"
+      },
+      "fieldAccess": {
+        "resolution": "required",
+        "reply_needed": "editable",
+        "category": "editable",
+        "reply_summary": "hidden"
+      },
+      "paths": [
+        {
+          "key": "assign",
+          "label": "Repartizează",
+          "to": "handling"
+        }
+      ]
+    },
+    {
+      "key": "handling",
+      "type": "human",
+      "name": "Soluționare",
+      "assignment": {
+        "rule": "chosen_by_previous"
+      },
+      "fieldAccess": {
+        "reply_summary": "editable",
+        "extension_requested": "editable",
+        "reply_needed": "visible"
+      },
+      "paths": [
+        {
+          "key": "reply",
+          "label": "Trimite răspunsul la avizare",
+          "to": "head_approval",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.reply_needed"
+              },
+              true
+            ]
+          },
+          "requiresSignatures": [
+            "reply_letter"
+          ],
+          "validations": [
+            {
+              "rule": {
+                "!!": {
+                  "var": "fields.reply_summary"
+                }
+              },
+              "message": "Completați rezumatul răspunsului."
+            }
+          ]
+        },
+        {
+          "key": "file",
+          "label": "Clasează fără răspuns",
+          "to": "file_without_reply",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.reply_needed"
+              },
+              false
+            ]
+          },
+          "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "head_approval",
+      "type": "human",
+      "name": "Semnare răspuns",
+      "assignment": {
+        "rule": "department_head",
+        "step": "handling"
+      },
+      "paths": [
+        {
+          "key": "sign",
+          "label": "Semnează și trimite",
+          "to": "dispatch",
+          "requiresSignatures": [
+            "reply_letter"
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează",
+          "to": "handling",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "dispatch",
+      "type": "system",
+      "name": "Înregistrare ieșire și expediere",
+      "onEnter": [
+        {
+          "type": "register",
+          "register": "general",
+          "direction": "out",
+          "document": "reply_letter",
+          "relatedTo": "previous_in"
+        },
+        {
+          "type": "notify",
+          "to": "beneficiary_email",
+          "template": "p5_reply_email",
+          "attach": [
+            "reply_letter"
+          ]
+        }
+      ],
+      "next": "done"
+    },
+    {
+      "key": "file_without_reply",
+      "type": "end_positive",
+      "name": "Clasat fără răspuns"
+    },
+    {
+      "key": "done",
+      "type": "end_positive",
+      "name": "Soluționat"
+    }
+  ]
+}

@@ -104,6 +104,7 @@ export interface PathDef {
   kind?: PathKind;
   visibleWhen?: JsonLogic;
   requiresComment?: boolean;
+  validateFields?: boolean;
   requiresChecklistComplete?: string;
   requiresSignatures?: string[];
   validations?: Validation[];
@@ -151,7 +152,7 @@ export interface ProcessDefinition {
   fields: FieldDef[];
   checklists?: Array<{ key: string; template: string; verifierRoles?: Array<'primary' | 'second'> }>;
   documents?: Array<{ key: string; template: string; docType: string; pdf?: boolean; signatureLevel?: SignatureLevel }>;
-  deadlines?: Array<{ key: string; definition: string; startsAt?: string; stopsAt?: string[] }>;
+  deadlines?: Array<{ key: string; definition: string; startsAt?: string; stopsAt?: string[]; when?: JsonLogic }>;
   separationOfDuties?: Array<{ steps: string[]; message: string }>;
   steps: StepDef[];
 }

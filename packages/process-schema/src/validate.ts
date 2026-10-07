@@ -102,6 +102,7 @@ export function validateDefinition(input: unknown): { ok: true; definition: Proc
 
   (def.deadlines ?? []).forEach((d, i) => {
     for (const k of [d.startsAt, ...(d.stopsAt ?? [])]) if (k && !steps.has(k)) add(`/deadlines/${i}`, `unknown step "${k}"`);
+    checkRuleVars(d.when, `/deadlines/${i}`);
   });
   (def.separationOfDuties ?? []).forEach((r, i) => {
     for (const k of r.steps) if (!steps.has(k)) add(`/separationOfDuties/${i}`, `unknown step "${k}"`);
