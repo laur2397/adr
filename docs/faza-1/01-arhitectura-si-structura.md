@@ -7,7 +7,7 @@
 | Forma aplicatiei | **monolit modular** (un API, module cu granite clare) + worker pentru joburi | o echipa de 3-4 oameni, instalare on-premise simpla; modulele pot fi separate ulterior |
 | Backend | **TypeScript, NestJS**, Node 22 LTS | aceeasi limba cu frontend-ul si cu schema definitiilor de proces (tipuri partajate) |
 | Baza de date | **PostgreSQL 16** | tranzactii pentru contoare, JSONB pentru valori de formular, full-text, triggere pentru audit |
-| Acces la date | **Kysely** (query builder tipizat) + migrari SQL scrise de mana | controlam exact SQL-ul pentru contoare, blocari si audit; schema este [`db/schema.sql`](../../db/schema.sql) |
+| Acces la date | **Kysely** (query builder tipizat) + migrari SQL scrise de mana | controlam exact SQL-ul pentru contoare, blocari si audit; schema este [`db/migrations/0001_schema.sql`](../../db/migrations/0001_schema.sql) |
 | Motor de flux | **propriu**, definitii JSON validate cu JSON Schema | semantica necesara (matrice camp x pas, termene cu suspendari, invalidarea semnaturilor la returnare, inlocuiri) e specifica produsului; Flowable ar aduce un runtime Java si un al doilea model de date fara sa rezolve aceste parti. Pastram un `WorkflowEngine` ca interfata, deci un adaptor Flowable ramane posibil |
 | Coada de joburi | **pg-boss** (pe PostgreSQL, MIT) | fara Redis: o componenta mai putin de instalat si de salvat; volumul (termene, email, generare documente) este mic |
 | Fisiere | **interfata `ObjectStorage`**, implementari: sistem de fisiere si S3 (SeaweedFS in docker-compose) | vezi sectiunea 3 despre MinIO |

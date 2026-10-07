@@ -16,7 +16,7 @@ porneste dupa confirmarea intelegerii si raspunsul la intrebarile deschise.
 | [docs/faza-1/01-arhitectura-si-structura.md](docs/faza-1/01-arhitectura-si-structura.md) | stiva, structura monorepo, licente, reguli ale motorului de flux |
 | [docs/faza-1/02-model-date.md](docs/faza-1/02-model-date.md) | modelul de date si deciziile din spatele lui |
 | [docs/faza-1/03-contracte-api.md](docs/faza-1/03-contracte-api.md) | API REST propus pentru Faza 1 |
-| [db/schema.sql](db/schema.sql) | schema PostgreSQL 16 (devine prima migrare) |
+| [db/migrations/0001_schema.sql](db/migrations/0001_schema.sql) | schema PostgreSQL 16 (devine prima migrare) |
 | [packages/process-schema/process-definition.schema.json](packages/process-schema/process-definition.schema.json) | JSON Schema pentru definitiile de proces |
 | [examples/process-p1.json](examples/process-p1.json) | pachetul P1 (verificarea cererii de rambursare/plata) descris in acest format |
 

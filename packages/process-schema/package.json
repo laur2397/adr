@@ -1,0 +1,22 @@
+{
+  "name": "@flux/process-schema",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema.json": "./process-definition.schema.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@flux/validators": "workspace:*",
+    "ajv": "^8.17.1",
+    "json-logic-js": "^2.0.5"
+  },
+  "devDependencies": {
+    "@types/json-logic-js": "^2.0.8"
+  }
+}

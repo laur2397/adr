@@ -1,0 +1,29 @@
+{
+  "name": "flux-am",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:migrate": "pnpm --filter @flux/api migrate",
+    "db:seed": "pnpm --filter @flux/api seed",
+    "dev:api": "pnpm --filter @flux/api dev",
+    "dev:worker": "pnpm --filter @flux/api dev:worker",
+    "dev:web": "pnpm --filter @flux/web dev"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 # Flux AM – Faza 1: modelul de date
 
-Schema completa (PostgreSQL 16, verificata prin incarcare): [`db/schema.sql`](../../db/schema.sql).
+Schema completa (PostgreSQL 16, verificata prin incarcare): [`db/migrations/0001_schema.sql`](../../db/migrations/0001_schema.sql).
 Aici explicam gruparea, maparea pe entitatile din prompt si deciziile care nu se vad din SQL.
 
 ## 1. Maparea pe entitatile cerute (prompt, sectiunea 3)

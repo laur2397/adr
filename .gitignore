@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.env
+/data/
+apps/api/storage/
+test-results/
+playwright-report/

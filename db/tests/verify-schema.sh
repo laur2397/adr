@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Loads db/schema.sql into a scratch database and checks the guarantees the design relies on:
+# Loads db/migrations/0001_schema.sql into a scratch database and checks the guarantees the design relies on:
 # gap-free concurrent register numbering, append-only hash-chained audit, immutable definitions.
 # Usage: PGHOST=... PGPORT=... PGUSER=... db/tests/verify-schema.sh   (needs createdb rights)
 set -euo pipefail
@@ -8,7 +8,7 @@ DB=flux_verify_$$
 createdb "$DB"
 trap 'dropdb --if-exists "$DB"' EXIT
 P=(psql -X -q -t -A -v ON_ERROR_STOP=1 -d "$DB")
-"${P[@]}" -f db/schema.sql >/dev/null
+"${P[@]}" -f db/migrations/0001_schema.sql >/dev/null
 
 ORG=00000000-0000-0000-0000-000000000001
 USR=00000000-0000-0000-0000-0000000000a1

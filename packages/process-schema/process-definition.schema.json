@@ -2,35 +2,86 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://flux-am.ro/schemas/process-definition/v1.json",
   "title": "Flux AM process definition",
-  "description": "A versioned process: fields, steps, paths, conditions, assignment, deadlines and automations. Conditions and validations are JSONLogic expressions evaluated against field values; no arbitrary code is executed.",
+  "description": "A versioned process: fields, steps, paths, conditions, assignment, deadlines and automations. Conditions and validations are JSONLogic expressions evaluated against field values; no arbitrary code is executed. Amount arithmetic uses the custom operators amount_add, amount_sub, amount_sum, amount_lte, amount_lt, amount_gte, amount_eq, which compute in integer bani.",
   "type": "object",
-  "required": ["schemaVersion", "key", "name", "subject", "fields", "steps"],
+  "required": [
+    "schemaVersion",
+    "key",
+    "name",
+    "subject",
+    "fields",
+    "steps"
+  ],
   "additionalProperties": false,
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "key": { "$ref": "#/$defs/key" },
-    "name": { "type": "string", "minLength": 1 },
-    "description": { "type": "string" },
+    "schemaVersion": {
+      "const": 1
+    },
+    "key": {
+      "$ref": "#/$defs/key"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
     "subject": {
       "description": "What an instance is about; drives prefill and the dossier header.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "requires": { "type": "array", "items": { "enum": ["project", "beneficiary", "program", "register_entry"] }, "uniqueItems": true },
-        "titleTemplate": { "type": "string", "description": "e.g. \"CR {{fields.request_no}} - {{project.smis_code}}\"" }
+        "requires": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "project",
+              "beneficiary",
+              "program",
+              "register_entry"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "titleTemplate": {
+          "type": "string",
+          "description": "e.g. \"CR {{fields.request_no}} - {{project.smis_code}}\""
+        }
       }
     },
-    "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+    "fields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/field"
+      }
+    },
     "checklists": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["key", "template"],
+        "required": [
+          "key",
+          "template"
+        ],
         "additionalProperties": false,
         "properties": {
-          "key": { "$ref": "#/$defs/key" },
-          "template": { "$ref": "#/$defs/key", "description": "checklist_template.key; the published version at instance start is pinned" },
-          "verifierRoles": { "type": "array", "items": { "enum": ["primary", "second"] } }
+          "key": {
+            "$ref": "#/$defs/key"
+          },
+          "template": {
+            "$ref": "#/$defs/key",
+            "description": "checklist_template.key; the published version at instance start is pinned"
+          },
+          "verifierRoles": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "primary",
+                "second"
+              ]
+            }
+          }
         }
       }
     },
@@ -38,14 +89,30 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["key", "template", "docType"],
+        "required": [
+          "key",
+          "template",
+          "docType"
+        ],
         "additionalProperties": false,
         "properties": {
-          "key": { "$ref": "#/$defs/key" },
-          "template": { "$ref": "#/$defs/key", "description": "document_template.key" },
-          "docType": { "type": "string" },
-          "pdf": { "type": "boolean", "default": true },
-          "signatureLevel": { "$ref": "#/$defs/signatureLevel" }
+          "key": {
+            "$ref": "#/$defs/key"
+          },
+          "template": {
+            "$ref": "#/$defs/key",
+            "description": "document_template.key"
+          },
+          "docType": {
+            "type": "string"
+          },
+          "pdf": {
+            "type": "boolean",
+            "default": true
+          },
+          "signatureLevel": {
+            "$ref": "#/$defs/signatureLevel"
+          }
         }
       }
     },
@@ -53,13 +120,30 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["key", "definition"],
+        "required": [
+          "key",
+          "definition"
+        ],
         "additionalProperties": false,
         "properties": {
-          "key": { "$ref": "#/$defs/key" },
-          "definition": { "$ref": "#/$defs/key", "description": "deadline_definition.key (configurable, may be marked to_validate)" },
-          "startsAt": { "$ref": "#/$defs/key", "description": "step key whose entry starts the clock; omit to start with the instance" },
-          "stopsAt": { "type": "array", "items": { "$ref": "#/$defs/key" }, "description": "step keys whose entry stops the clock (met)" }
+          "key": {
+            "$ref": "#/$defs/key"
+          },
+          "definition": {
+            "$ref": "#/$defs/key",
+            "description": "deadline_definition.key (configurable, may be marked to_validate)"
+          },
+          "startsAt": {
+            "$ref": "#/$defs/key",
+            "description": "step key whose entry starts the clock; omit to start with the instance"
+          },
+          "stopsAt": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/key"
+            },
+            "description": "step keys whose entry stops the clock (met)"
+          }
         }
       }
     },
@@ -67,44 +151,136 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["steps", "message"],
+        "required": [
+          "steps",
+          "message"
+        ],
         "additionalProperties": false,
         "properties": {
-          "steps": { "type": "array", "items": { "$ref": "#/$defs/key" }, "minItems": 2 },
-          "message": { "type": "string" }
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/key"
+            },
+            "minItems": 2
+          },
+          "message": {
+            "type": "string"
+          }
         }
       }
     },
-    "steps": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/step" } }
+    "steps": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    }
   },
   "$defs": {
-    "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,62}$" },
-    "jsonLogic": { "type": ["object", "boolean"], "description": "JSONLogic expression; variables: fields.*, project.*, beneficiary.*, instance.*, user.*" },
-    "signatureLevel": { "enum": ["simple", "advanced", "qualified", "seal"] },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,62}$"
+    },
+    "jsonLogic": {
+      "type": [
+        "object",
+        "boolean"
+      ],
+      "description": "JSONLogic expression; variables: fields.*, project.*, beneficiary.*, instance.*, user.*"
+    },
+    "signatureLevel": {
+      "enum": [
+        "simple",
+        "advanced",
+        "qualified",
+        "seal"
+      ]
+    },
     "fieldType": {
-      "enum": ["text", "textarea", "integer", "amount", "percent", "boolean", "date", "datetime", "choice", "multichoice", "user", "beneficiary", "project", "file", "line_items", "calculated"]
+      "enum": [
+        "text",
+        "textarea",
+        "integer",
+        "amount",
+        "percent",
+        "boolean",
+        "date",
+        "datetime",
+        "choice",
+        "multichoice",
+        "user",
+        "beneficiary",
+        "project",
+        "file",
+        "line_items",
+        "calculated"
+      ]
     },
     "field": {
       "type": "object",
-      "required": ["key", "label", "type"],
+      "required": [
+        "key",
+        "label",
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
-        "key": { "$ref": "#/$defs/key" },
-        "label": { "type": "string" },
-        "type": { "$ref": "#/$defs/fieldType" },
-        "nomenclature": { "$ref": "#/$defs/key", "description": "for choice / multichoice" },
-        "format": { "enum": ["cui", "iban", "smis_code", "email"] },
-        "min": { "type": "number" },
-        "max": { "type": "number" },
-        "pattern": { "type": "string" },
-        "formula": { "$ref": "#/$defs/jsonLogic", "description": "for calculated fields" },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/fieldType"
+        },
+        "nomenclature": {
+          "$ref": "#/$defs/key",
+          "description": "for choice / multichoice"
+        },
+        "format": {
+          "enum": [
+            "cui",
+            "iban",
+            "smis_code",
+            "email"
+          ]
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "formula": {
+          "$ref": "#/$defs/jsonLogic",
+          "description": "for calculated fields"
+        },
         "prefill": {
           "type": "object",
-          "required": ["from"],
+          "required": [
+            "from"
+          ],
           "additionalProperties": false,
           "properties": {
-            "from": { "enum": ["project", "beneficiary", "anaf", "previous_instance", "register_entry", "constant"] },
-            "path": { "type": "string" },
+            "from": {
+              "enum": [
+                "project",
+                "beneficiary",
+                "anaf",
+                "previous_instance",
+                "register_entry",
+                "constant"
+              ]
+            },
+            "path": {
+              "type": "string"
+            },
             "value": {}
           }
         },
@@ -113,110 +289,511 @@
           "description": "for line_items",
           "items": {
             "type": "object",
-            "required": ["key", "label", "type"],
+            "required": [
+              "key",
+              "label",
+              "type"
+            ],
             "additionalProperties": false,
             "properties": {
-              "key": { "$ref": "#/$defs/key" },
-              "label": { "type": "string" },
-              "type": { "enum": ["text", "integer", "amount", "percent", "date", "choice", "file", "calculated"] },
-              "nomenclature": { "$ref": "#/$defs/key" },
-              "formula": { "$ref": "#/$defs/jsonLogic" },
-              "total": { "type": "boolean" }
+              "key": {
+                "$ref": "#/$defs/key"
+              },
+              "label": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "text",
+                  "integer",
+                  "amount",
+                  "percent",
+                  "date",
+                  "choice",
+                  "file",
+                  "calculated"
+                ]
+              },
+              "nomenclature": {
+                "$ref": "#/$defs/key"
+              },
+              "formula": {
+                "$ref": "#/$defs/jsonLogic"
+              },
+              "total": {
+                "type": "boolean"
+              },
+              "resultType": {
+                "enum": [
+                  "amount",
+                  "integer",
+                  "percent",
+                  "text"
+                ]
+              }
             }
           }
         },
-        "rowValidations": { "type": "array", "items": { "$ref": "#/$defs/validation" } }
+        "rowValidations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/validation"
+          }
+        },
+        "resultType": {
+          "enum": [
+            "amount",
+            "integer",
+            "percent",
+            "text",
+            "boolean"
+          ],
+          "description": "result type of a calculated field"
+        }
       }
     },
     "validation": {
       "type": "object",
-      "required": ["rule", "message"],
+      "required": [
+        "rule",
+        "message"
+      ],
       "additionalProperties": false,
       "properties": {
-        "rule": { "$ref": "#/$defs/jsonLogic" },
-        "message": { "type": "string", "description": "Romanian message shown to the user: what happened and how to fix it" }
+        "rule": {
+          "$ref": "#/$defs/jsonLogic"
+        },
+        "message": {
+          "type": "string",
+          "description": "Romanian message shown to the user: what happened and how to fix it"
+        }
       }
     },
-    "fieldAccess": { "enum": ["hidden", "visible", "editable", "required"] },
+    "fieldAccess": {
+      "enum": [
+        "hidden",
+        "visible",
+        "editable",
+        "required"
+      ]
+    },
     "assignment": {
       "type": "object",
-      "required": ["rule"],
+      "required": [
+        "rule"
+      ],
       "additionalProperties": false,
       "properties": {
-        "rule": { "enum": ["fixed_user", "role_queue", "project_expert", "least_loaded", "previous_actor", "department_head", "chosen_by_previous"] },
-        "role": { "type": "string" },
-        "user": { "type": "string" },
-        "step": { "$ref": "#/$defs/key", "description": "for previous_actor" },
-        "department": { "type": "string" }
+        "rule": {
+          "enum": [
+            "fixed_user",
+            "role_queue",
+            "project_expert",
+            "least_loaded",
+            "previous_actor",
+            "department_head",
+            "chosen_by_previous"
+          ]
+        },
+        "role": {
+          "type": "string"
+        },
+        "user": {
+          "type": "string"
+        },
+        "step": {
+          "$ref": "#/$defs/key",
+          "description": "for previous_actor"
+        },
+        "department": {
+          "type": "string"
+        }
       }
     },
     "action": {
       "type": "object",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": { "enum": ["set_field", "generate_document", "request_signatures", "notify", "register", "call_rest", "start_subflow", "grant_access", "pause_deadline", "resume_deadline", "update_budget_lines"] },
-        "when": { "$ref": "#/$defs/jsonLogic" }
+        "type": {
+          "enum": [
+            "set_field",
+            "generate_document",
+            "request_signatures",
+            "notify",
+            "register",
+            "call_rest",
+            "start_subflow",
+            "grant_access",
+            "pause_deadline",
+            "resume_deadline",
+            "update_budget_lines"
+          ]
+        },
+        "when": {
+          "$ref": "#/$defs/jsonLogic"
+        }
       },
       "allOf": [
-        { "if": { "properties": { "type": { "const": "set_field" } } }, "then": { "required": ["field", "value"] } },
-        { "if": { "properties": { "type": { "const": "generate_document" } } }, "then": { "required": ["document"] } },
-        { "if": { "properties": { "type": { "const": "request_signatures" } } }, "then": { "required": ["document", "signers"] } },
-        { "if": { "properties": { "type": { "const": "register" } } }, "then": { "required": ["register", "direction"] } },
-        { "if": { "properties": { "type": { "const": "notify" } } }, "then": { "required": ["to", "template"] } },
-        { "if": { "properties": { "type": { "enum": ["pause_deadline", "resume_deadline"] } } }, "then": { "required": ["deadline"] } }
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "set_field"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "field",
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "generate_document"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "document"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "request_signatures"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "document",
+              "signers"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "register"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "register",
+              "direction"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "notify"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "to",
+              "template"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "pause_deadline",
+                  "resume_deadline"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "deadline"
+            ]
+          }
+        }
       ]
     },
     "path": {
       "type": "object",
-      "required": ["key", "label", "to"],
+      "required": [
+        "key",
+        "label",
+        "to"
+      ],
       "additionalProperties": false,
       "properties": {
-        "key": { "$ref": "#/$defs/key" },
-        "label": { "type": "string", "description": "button label" },
-        "to": { "$ref": "#/$defs/key" },
-        "kind": { "enum": ["forward", "return", "reject"], "default": "forward" },
-        "visibleWhen": { "$ref": "#/$defs/jsonLogic" },
-        "requiresComment": { "type": "boolean", "default": false },
-        "requiresChecklistComplete": { "$ref": "#/$defs/key" },
-        "requiresSignatures": { "type": "array", "items": { "$ref": "#/$defs/key" }, "description": "document keys the actor must sign before the path is taken" },
-        "validations": { "type": "array", "items": { "$ref": "#/$defs/validation" } },
-        "actions": { "type": "array", "items": { "$ref": "#/$defs/action" } }
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "label": {
+          "type": "string",
+          "description": "button label"
+        },
+        "to": {
+          "$ref": "#/$defs/key"
+        },
+        "kind": {
+          "enum": [
+            "forward",
+            "return",
+            "reject"
+          ],
+          "default": "forward"
+        },
+        "visibleWhen": {
+          "$ref": "#/$defs/jsonLogic"
+        },
+        "requiresComment": {
+          "type": "boolean",
+          "default": false
+        },
+        "requiresChecklistComplete": {
+          "$ref": "#/$defs/key"
+        },
+        "requiresSignatures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key"
+          },
+          "description": "document keys the actor must sign before the path is taken"
+        },
+        "validations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/validation"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/action"
+          }
+        }
       }
     },
     "step": {
       "type": "object",
-      "required": ["key", "type", "name"],
+      "required": [
+        "key",
+        "type",
+        "name"
+      ],
       "additionalProperties": false,
       "properties": {
-        "key": { "$ref": "#/$defs/key" },
-        "type": { "enum": ["start", "human", "system", "decision", "parallel_split", "parallel_join", "subflow", "end_positive", "end_negative"] },
-        "name": { "type": "string" },
-        "assignment": { "$ref": "#/$defs/assignment" },
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "type": {
+          "enum": [
+            "start",
+            "human",
+            "system",
+            "decision",
+            "parallel_split",
+            "parallel_join",
+            "subflow",
+            "end_positive",
+            "end_negative"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "assignment": {
+          "$ref": "#/$defs/assignment"
+        },
         "fieldAccess": {
           "type": "object",
           "description": "field matrix for this step; fields not listed are visible",
-          "propertyNames": { "$ref": "#/$defs/key" },
-          "additionalProperties": { "$ref": "#/$defs/fieldAccess" }
+          "propertyNames": {
+            "$ref": "#/$defs/key"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/fieldAccess"
+          }
         },
-        "checklist": { "$ref": "#/$defs/key" },
-        "checklistVerifier": { "enum": ["primary", "second"] },
-        "deadline": { "$ref": "#/$defs/key" },
-        "paths": { "type": "array", "items": { "$ref": "#/$defs/path" } },
-        "branches": { "type": "array", "items": { "type": "object", "required": ["to"], "additionalProperties": false, "properties": { "to": { "$ref": "#/$defs/key" }, "when": { "$ref": "#/$defs/jsonLogic" } } }, "description": "parallel_split" },
-        "join": { "enum": ["all", "any"], "description": "parallel_join" },
-        "next": { "$ref": "#/$defs/key", "description": "system / parallel_join / subflow" },
-        "subflow": { "$ref": "#/$defs/key" },
-        "onEnter": { "type": "array", "items": { "$ref": "#/$defs/action" } },
-        "onExit": { "type": "array", "items": { "$ref": "#/$defs/action" } }
+        "checklist": {
+          "$ref": "#/$defs/key"
+        },
+        "checklistVerifier": {
+          "enum": [
+            "primary",
+            "second"
+          ]
+        },
+        "deadline": {
+          "$ref": "#/$defs/key"
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "to": {
+                "$ref": "#/$defs/key"
+              },
+              "when": {
+                "$ref": "#/$defs/jsonLogic"
+              }
+            }
+          },
+          "description": "parallel_split"
+        },
+        "join": {
+          "enum": [
+            "all",
+            "any"
+          ],
+          "description": "parallel_join"
+        },
+        "next": {
+          "$ref": "#/$defs/key",
+          "description": "system / parallel_join / subflow"
+        },
+        "subflow": {
+          "$ref": "#/$defs/key"
+        },
+        "onEnter": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/action"
+          }
+        },
+        "onExit": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/action"
+          }
+        }
       },
       "allOf": [
-        { "if": { "properties": { "type": { "const": "human" } } }, "then": { "required": ["assignment", "paths"] } },
-        { "if": { "properties": { "type": { "const": "decision" } } }, "then": { "required": ["paths"] } },
-        { "if": { "properties": { "type": { "const": "start" } } }, "then": { "required": ["paths"] } },
-        { "if": { "properties": { "type": { "const": "parallel_split" } } }, "then": { "required": ["branches"] } },
-        { "if": { "properties": { "type": { "const": "parallel_join" } } }, "then": { "required": ["join", "next"] } },
-        { "if": { "properties": { "type": { "const": "system" } } }, "then": { "required": ["next"] } },
-        { "if": { "properties": { "type": { "const": "subflow" } } }, "then": { "required": ["subflow", "next"] } }
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "human"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "assignment",
+              "paths"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "decision"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "paths"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "start"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "paths"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "parallel_split"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "branches"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "parallel_join"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "join",
+              "next"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "system"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "next"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "subflow"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "subflow",
+              "next"
+            ]
+          }
+        }
       ]
     }
   }
