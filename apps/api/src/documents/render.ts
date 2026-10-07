@@ -30,6 +30,7 @@ export function renderDocx(template: Buffer, data: Record<string, unknown>): Buf
 let converterAvailable: boolean | undefined;
 
 export async function pdfConversionAvailable(): Promise<boolean> {
+  if (config.gotenbergUrl) return true;
   if (!config.sofficePath) return false;
   if (converterAvailable === undefined) {
     converterAvailable = await execFileAsync(config.sofficePath, ['--version'], { timeout: 20_000 }).then(
@@ -40,8 +41,17 @@ export async function pdfConversionAvailable(): Promise<boolean> {
   return converterAvailable;
 }
 
-/** DOCX -> PDF with LibreOffice headless; one private profile per call so conversions can run in parallel. */
+async function gotenberg(docx: Buffer): Promise<Buffer> {
+  const form = new FormData();
+  form.append('files', new Blob([new Uint8Array(docx)]), 'document.docx');
+  const res = await fetch(`${config.gotenbergUrl.replace(/\/$/, '')}/forms/libreoffice/convert`, { method: 'POST', body: form, signal: AbortSignal.timeout(120_000) });
+  if (!res.ok) throw new Error(`Gotenberg: HTTP ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+/** DOCX -> PDF with LibreOffice (Gotenberg service or local headless soffice with a private profile per call). */
 export async function docxToPdf(docx: Buffer): Promise<Buffer> {
+  if (config.gotenbergUrl) return gotenberg(docx);
   const dir = await mkdtemp(join(tmpdir(), 'flux-pdf-'));
   try {
     const input = join(dir, 'document.docx');

@@ -8,3 +8,6 @@ apps/api/storage/
 test-results/
 playwright-report/
 storage/
+deploy/.env
+deploy/.env.*
+!deploy/.env.example

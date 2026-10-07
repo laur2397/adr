@@ -15,16 +15,17 @@ export async function createSession(db: Db, userId: string, ip: string | null, u
   return token;
 }
 
-/** Returns the user id for a valid session token and slides the idle window. */
+/** Returns the user id for a valid session token; last_seen_at is refreshed at most once a minute. */
 export async function resolveSession(db: Db, token: string): Promise<{ sessionId: string; userId: string } | null> {
   const row = await maybeOne(
     db,
-    `update user_session set last_seen_at = now()
-      where token_hash = $1 and revoked_at is null and expires_at > now()
-      returning id, user_id`,
+    `select id, user_id, last_seen_at < now() - interval '1 minute' as stale
+       from user_session where token_hash = $1 and revoked_at is null and expires_at > now()`,
     [sha256(token)],
   );
-  return row ? { sessionId: row.id, userId: row.user_id } : null;
+  if (!row) return null;
+  if (row.stale) await query(db, `update user_session set last_seen_at = now() where id = $1`, [row.id]);
+  return { sessionId: row.id, userId: row.user_id };
 }
 
 export async function revokeSession(db: Db, token: string): Promise<void> {

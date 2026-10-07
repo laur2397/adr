@@ -9,7 +9,7 @@ import { SESSION_COOKIE, resolveSession } from './auth/session.js';
 import { config } from './core/config.js';
 import { getPool } from './core/db.js';
 import { AppError } from './core/errors.js';
-import { loadUser, type CurrentUser } from './identity/context.js';
+import { loadUserCached, type CurrentUser } from './identity/context.js';
 import { adminRoutes } from './admin/routes.js';
 import { authRoutes } from './auth/routes.js';
 import { documentRoutes } from './documents/routes.js';
@@ -63,7 +63,7 @@ export async function buildApp(opts: { logger?: boolean } = {}): Promise<Fastify
     if (token) {
       const session = await resolveSession(getPool(), token);
       if (session) {
-        const user = await loadUser(getPool(), session.userId);
+        const user = await loadUserCached(getPool(), session.userId);
         if (user) {
           user.ip = req.ip;
           user.userAgent = req.headers['user-agent'] ?? null;

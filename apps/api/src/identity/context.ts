@@ -31,6 +31,24 @@ export interface CurrentUser {
   userAgent?: string | null;
 }
 
+// Short cache: roles, substitutions and deactivation take effect within USER_CACHE_MS.
+const USER_CACHE_MS = Number(process.env.USER_CACHE_MS ?? 10_000);
+const cache = new Map<string, { at: number; user: CurrentUser | null }>();
+
+export async function loadUserCached(db: Db, userId: string): Promise<CurrentUser | null> {
+  const hit = cache.get(userId);
+  if (hit && Date.now() - hit.at < USER_CACHE_MS) return hit.user ? { ...hit.user } : null;
+  const user = await loadUser(db, userId);
+  cache.set(userId, { at: Date.now(), user });
+  if (cache.size > 5000) cache.clear();
+  return user ? { ...user } : null;
+}
+
+export function forgetUser(userId?: string): void {
+  if (userId) cache.delete(userId);
+  else cache.clear();
+}
+
 export async function loadUser(db: Db, userId: string): Promise<CurrentUser | null> {
   const [u] = await query(
     db,

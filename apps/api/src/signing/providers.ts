@@ -62,7 +62,9 @@ export function signatureProvider(): SignatureProvider {
   if (provider) return provider;
   switch (config.signatureProvider) {
     case 'simulated':
-      if (config.env === 'production') throw new Error('SIGNATURE_PROVIDER=simulated is not allowed in production.');
+      if (config.env === 'production' && process.env.ALLOW_SIMULATED_SIGNATURES !== 'true') {
+        throw new Error('SIGNATURE_PROVIDER=simulated is refused in production (set ALLOW_SIMULATED_SIGNATURES=true only on a test/pilot install).');
+      }
       provider = new SimulatedProvider();
       return provider;
     default:

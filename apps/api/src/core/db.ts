@@ -12,7 +12,7 @@ let pool: pg.Pool | undefined;
 export function getPool(): pg.Pool {
   pool ??= new pg.Pool({
     connectionString: config.databaseUrl,
-    max: Number(process.env.DB_POOL_MAX ?? 20),
+    max: Number(process.env.DB_POOL_MAX ?? 10),
     options: '-c search_path=flux,public',
   });
   return pool;

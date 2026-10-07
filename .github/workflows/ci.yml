@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 20
+      gotenberg:
+        image: gotenberg/gotenberg:8
+        ports: ["3010:3000"]
+    env:
+      TEST_DATABASE_URL: postgres://postgres@localhost:5432/flux_test
+      E2E_DATABASE_URL: postgres://postgres@localhost:5432/flux_e2e
+      GOTENBERG_URL: http://localhost:3010
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Database schema guarantees
+        run: PGHOST=localhost PGUSER=postgres db/tests/verify-schema.sh
+      - name: Unit and integration tests
+        run: pnpm -r test
+      - name: Build web
+        run: pnpm --filter @flux/web build
+      - name: Browser end-to-end test (P1)
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/

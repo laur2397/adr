@@ -209,7 +209,19 @@ export async function workflowRoutes(app: FastifyInstance) {
       });
     }
     const actionable = myTasks.find((t) => t.canAct);
-    const { values, meta } = await loadFields(pool, ctx.instance.id);
+    // Independent reads run in parallel on the pool.
+    const [{ values, meta }, circuitView, checklists, deadlines, documents, documentTitles, registrations] = await Promise.all([
+      loadFields(pool, ctx.instance.id),
+      circuit(ctx),
+      Promise.all((ctx.def.checklists ?? []).map((c) => checklistView(ctx.instance.id, c.key))),
+      deadlinesForInstance(pool, ctx.instance.organization_id, ctx.instance.id),
+      documentsForInstance(pool, ctx.instance.id, ctx.def),
+      query(pool, `select key, name from document_template where organization_id = $1 and key = any($2::text[]) and status = 'published'`, [
+        ctx.instance.organization_id,
+        (ctx.def.documents ?? []).map((d) => d.template),
+      ]),
+      entriesForInstance(pool, ctx.instance.id),
+    ]);
     const fields = (ctx.def.fields as FieldDef[])
       .map((f) => {
         const access = actionable ? fieldAccess(ctx.def, actionable.stepKey, f) : 'visible';
@@ -228,9 +240,8 @@ export async function workflowRoutes(app: FastifyInstance) {
         };
       })
       .filter((f) => f.access !== 'hidden');
-    await audit(pool, actorOf(user), { action: 'instance.view', entityType: 'instance', entityId: ctx.instance.id });
-    const checklists = [];
-    for (const c of ctx.def.checklists ?? []) checklists.push(await checklistView(ctx.instance.id, c.key));
+    // Reads are audited too; the event is written without making the user wait for the audit lock.
+    void audit(pool, actorOf(user), { action: 'instance.view', entityType: 'instance', entityId: ctx.instance.id }).catch((err) => req.log.error(err));
     return {
       id: ctx.instance.id,
       title: ctx.instance.title,
@@ -243,22 +254,14 @@ export async function workflowRoutes(app: FastifyInstance) {
       definition: { key: ctx.def.key, name: ctx.def.name, version: ctx.definitionVersion },
       project: ctx.project,
       beneficiary: ctx.beneficiary,
-      ...(await circuit(ctx)),
+      ...circuitView,
       tasks: myTasks,
       fields,
       checklists,
-      deadlines: await deadlinesForInstance(pool, ctx.instance.organization_id, ctx.instance.id),
-      documents: await documentsForInstance(pool, ctx.instance.id, ctx.def),
-      documentTitles: Object.fromEntries(
-        (
-          await query(
-            pool,
-            `select key, name from document_template where organization_id = $1 and key = any($2::text[]) and status = 'published'`,
-            [ctx.instance.organization_id, (ctx.def.documents ?? []).map((d) => d.template)],
-          )
-        ).map((r) => [(ctx.def.documents ?? []).find((d) => d.template === r.key)?.key, r.name]),
-      ),
-      registrations: await entriesForInstance(pool, ctx.instance.id),
+      deadlines,
+      documents,
+      documentTitles: Object.fromEntries(documentTitles.map((r) => [(ctx.def.documents ?? []).find((d) => d.template === r.key)?.key, r.name])),
+      registrations,
     };
   });
 

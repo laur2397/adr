@@ -35,11 +35,19 @@ export async function permissionOn(db: Db, user: CurrentUser, instanceId: string
 
 /** Throws 404 (not 403) without access, so the existence of the dossier is not revealed. */
 export async function requireView(db: Db, user: CurrentUser, instanceId: string): Promise<'edit' | 'view'> {
-  const exists = await maybeOne(db, `select organization_id from instance where id = $1`, [instanceId]);
-  if (!exists || exists.organization_id !== user.organizationId) throw notFound('Dosarul');
-  const p = await permissionOn(db, user, instanceId);
-  if (!p) throw notFound('Dosarul');
-  return p;
+  if (!/^[0-9a-f-]{36}$/i.test(instanceId)) throw notFound('Dosarul');
+  const row = await maybeOne(
+    db,
+    `select bool_or(a.permission = 'edit') as edit, count(a.*) > 0 as view
+       from instance i left join instance_acl a on a.instance_id = i.id and (
+            (a.principal_type = 'user' and (a.principal_id = $1 or a.principal_id = any($4::uuid[])))
+         or (a.principal_type = 'role' and a.principal_id = any($2::uuid[]))
+         or (a.principal_type = 'department' and a.principal_id = $3))
+      where i.id = $5 and i.organization_id = $6`,
+    [...aclParams(user), instanceId, user.organizationId],
+  );
+  if (!row?.view) throw notFound('Dosarul');
+  return row.edit ? 'edit' : 'view';
 }
 
 export async function grant(

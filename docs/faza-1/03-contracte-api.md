@@ -1,5 +1,7 @@
 # Flux AM – Faza 1: contracte API (propunere)
 
+> Stare: implementat. Contractul exact (generat din cod) este publicat de aplicație la `/api/docs` (OpenAPI). Diferențe față de propunerea de mai jos: semnarea este `POST /instances/{id}/documents/{docKey}/sign`, importul de proiecte și administrarea sunt sub `/projects/import` și `/admin/*`; concurența optimistă (`If-Match`) și `Idempotency-Key` nu sunt încă implementate (o a doua trimitere a aceleiași tranziții este refuzată pentru că sarcina e deja finalizată).
+
 API REST sub `/api/v1`, JSON, documentat OpenAPI 3.1 (generat din cod si publicat la
 `/api/docs`). Pentru UI: sesiune in cookie HttpOnly + token CSRF. Pentru integrari: token de
 serviciu (`Authorization: Bearer`), cu drepturi limitate la un set de procese.

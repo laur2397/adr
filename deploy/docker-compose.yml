@@ -1,0 +1,59 @@
+# Flux AM on one server: database, document conversion, application, background worker.
+# Usage: cp .env.example .env (edit it) && docker compose up -d && docker compose run --rm seed
+name: flux-am
+
+x-app: &app
+  image: ${FLUX_IMAGE:-flux-am:latest}
+  build: { context: .., dockerfile: Dockerfile }
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    DATABASE_URL: postgres://flux:${POSTGRES_PASSWORD}@db:5432/flux
+    GOTENBERG_URL: http://gotenberg:3000
+    STORAGE_DIR: /data/storage
+  volumes:
+    - documents:/data/storage
+  depends_on:
+    db: { condition: service_healthy }
+    gotenberg: { condition: service_started }
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: flux
+      POSTGRES_USER: flux
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flux -d flux"]
+      interval: 5s
+      retries: 20
+
+  gotenberg:
+    image: ${GOTENBERG_IMAGE:-gotenberg/gotenberg:8}
+    restart: unless-stopped
+    command: ["gotenberg", "--api-timeout=120s"]
+
+  api:
+    <<: *app
+    ports:
+      - "${HTTP_PORT:-8080}:3000"
+
+  worker:
+    <<: *app
+    command: ["node", "--import", "tsx", "src/worker.ts"]
+
+  # One-off: creates the organization, administrator, roles, registers, calendar, deadlines and
+  # the P1/P2/P5 packages. Safe to run again after an upgrade (publishes changed packages only).
+  seed:
+    <<: *app
+    restart: "no"
+    profiles: [tools]
+    command: ["node", "--import", "tsx", "src/cli/seed.ts"]
+
+volumes:
+  pgdata:
+  documents:

@@ -22,8 +22,10 @@ export const config = {
   /** ANAF: 'live' calls the public web service, 'mock' answers from local fixtures (tests, offline demo). */
   anafMode: (env.ANAF_MODE ?? 'live') as 'live' | 'mock',
   anafUrl: env.ANAF_URL ?? 'https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva',
-  /** Path to soffice for DOCX -> PDF; empty disables PDF conversion. */
+  /** Path to soffice for DOCX -> PDF; empty disables local conversion. */
   sofficePath: env.SOFFICE_PATH ?? 'soffice',
+  /** Gotenberg service (LibreOffice over HTTP); when set it is used instead of a local soffice. */
+  gotenbergUrl: env.GOTENBERG_URL ?? '',
   /** Signature provider adapter: 'simulated' is for development and demos only. */
   signatureProvider: env.SIGNATURE_PROVIDER ?? 'simulated',
   smtpUrl: env.SMTP_URL ?? '',

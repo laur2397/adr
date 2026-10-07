@@ -5,7 +5,22 @@ import { maybeOne, one, query, tx, type Db } from '../core/db.js';
 import { AppError, notFound } from '../core/errors.js';
 import { notifyUsers } from '../notifications/service.js';
 
+const calendarCache = new Map<string, { at: number; calendar: WorkingCalendar }>();
+
+/** Drops cached calendars (after the administrator edits holidays). */
+export function forgetCalendars(): void {
+  calendarCache.clear();
+}
+
 export async function loadCalendar(db: Db, organizationId: string): Promise<WorkingCalendar> {
+  const hit = calendarCache.get(organizationId);
+  if (hit && Date.now() - hit.at < 60_000) return hit.calendar;
+  const calendar = await readCalendar(db, organizationId);
+  calendarCache.set(organizationId, { at: Date.now(), calendar });
+  return calendar;
+}
+
+async function readCalendar(db: Db, organizationId: string): Promise<WorkingCalendar> {
   const holidays = await query(db, `select day from holiday where organization_id = $1`, [organizationId]);
   const exceptions = await query(db, `select day, is_working from working_day_exception where organization_id = $1`, [organizationId]);
   return new WorkingCalendar({

@@ -9,13 +9,18 @@ import { revokeAllSessions } from '../auth/session.js';
 import { getPool, maybeOne, one, query, tx } from '../core/db.js';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../core/errors.js';
 import { putFile } from '../documents/storage.js';
-import { actorOf, hasRole, type CurrentUser } from '../identity/context.js';
+import { actorOf, forgetUser, hasRole, type CurrentUser } from '../identity/context.js';
 
 function requireAdmin(user: CurrentUser) {
   if (!hasRole(user, 'functional_admin')) throw forbidden('Această secțiune este disponibilă administratorului funcțional.');
 }
 
 export async function adminRoutes(app: FastifyInstance) {
+  // Users, roles and substitutions changed here must not be served from the user cache.
+  app.addHook('onResponse', async (req, reply) => {
+    if (req.method !== 'GET' && reply.statusCode < 400) forgetUser();
+  });
+
   // ---------------------------------------------------------------- users and roles
   app.get('/admin/users', async (req) => {
     const user = userOf(req);
@@ -225,7 +230,8 @@ export async function adminRoutes(app: FastifyInstance) {
         }
         // Running deadlines move with the calendar.
         const running = await query(db, `select d.id from deadline d join instance i on i.id = d.instance_id where i.organization_id = $1 and d.status in ('running', 'paused')`, [user.organizationId]);
-        const { recompute } = await import('../deadlines/service.js');
+        const { recompute, forgetCalendars } = await import('../deadlines/service.js');
+        forgetCalendars();
         for (const d of running) await recompute(db, d.id);
         await audit(db, actorOf(user), { action: 'admin.calendar.update', entityType: 'calendar', entityId: String(year), newValue: req.body });
       });

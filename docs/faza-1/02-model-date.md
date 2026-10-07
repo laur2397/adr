@@ -38,7 +38,7 @@ unic partial). Instanta pastreaza `definition_id`, deci ruleaza pana la capat pe
 care a pornit. Starea la executie (instante, ramuri, sarcini, valori) este relationala, ca sa
 putem interoga eficient „sarcinile mele”, „dosarele cu termen depasit” etc.
 
-Exemplul complet pentru P1: [`examples/process-p1.json`](../../examples/process-p1.json)
+Exemplul complet pentru P1: [`processes/p1/process.json`](../../processes/p1/process.json)
 (trece validarea JSON Schema si verificarile de consistenta: toate caile duc la pasi existenti,
 toti pasii sunt accesibili, campurile din matrice exista).
 

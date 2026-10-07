@@ -5,64 +5,62 @@
 | Decizie | Alegere | Motiv |
 |---|---|---|
 | Forma aplicatiei | **monolit modular** (un API, module cu granite clare) + worker pentru joburi | o echipa de 3-4 oameni, instalare on-premise simpla; modulele pot fi separate ulterior |
-| Backend | **TypeScript, NestJS**, Node 22 LTS | aceeasi limba cu frontend-ul si cu schema definitiilor de proces (tipuri partajate) |
+| Backend | **TypeScript, Fastify 5**, Node 22 LTS | aceeasi limba cu frontend-ul si cu schema definitiilor de proces (tipuri partajate). *La implementare: Fastify in locul NestJS (mai putine straturi, testare directa cu `inject`, OpenAPI din aceleasi rute).* |
 | Baza de date | **PostgreSQL 16** | tranzactii pentru contoare, JSONB pentru valori de formular, full-text, triggere pentru audit |
-| Acces la date | **Kysely** (query builder tipizat) + migrari SQL scrise de mana | controlam exact SQL-ul pentru contoare, blocari si audit; schema este [`db/migrations/0001_schema.sql`](../../db/migrations/0001_schema.sql) |
+| Acces la date | **`pg` cu SQL scris de mana** + migrari SQL (*initial: Kysely*) | controlam exact SQL-ul pentru contoare, blocari si audit; schema este [`db/migrations/0001_schema.sql`](../../db/migrations/0001_schema.sql) |
 | Motor de flux | **propriu**, definitii JSON validate cu JSON Schema | semantica necesara (matrice camp x pas, termene cu suspendari, invalidarea semnaturilor la returnare, inlocuiri) e specifica produsului; Flowable ar aduce un runtime Java si un al doilea model de date fara sa rezolve aceste parti. Pastram un `WorkflowEngine` ca interfata, deci un adaptor Flowable ramane posibil |
-| Coada de joburi | **pg-boss** (pe PostgreSQL, MIT) | fara Redis: o componenta mai putin de instalat si de salvat; volumul (termene, email, generare documente) este mic |
-| Fisiere | **interfata `ObjectStorage`**, implementari: sistem de fisiere si S3 (SeaweedFS in docker-compose) | vezi sectiunea 3 despre MinIO |
-| Documente | **docxtemplater** (MIT, modulele de baza) pentru DOCX; **LibreOffice headless** (MPL) intr-un container separat pentru PDF | prompt, sectiunea 13 |
+| Coada de joburi | **outbox tranzactional propriu** pe PostgreSQL (`job_outbox`, `FOR UPDATE SKIP LOCKED`) + worker (*initial: pg-boss*) | fara Redis si fara dependenta in plus; jobul se creeaza in aceeasi tranzactie cu schimbarea care il cere |
+| Fisiere | stocare **adresata dupa continut** (cheia = SHA-256) pe sistemul de fisiere, verificata la fiecare citire; o implementare S3 se poate adauga in spatele acelorasi functii | vezi sectiunea 3 despre MinIO |
+| Documente | **docxtemplater** (MIT, modulele de baza) pentru DOCX; **LibreOffice** pentru PDF: container **Gotenberg** (MIT) in docker-compose sau `soffice` local | prompt, sectiunea 13 |
 | Semnatura | adaptor `SignatureProvider` (un furnizor in Faza 1); validare cu **EU DSS** ca serviciu separat | PAdES B-LTA si validarea nu au biblioteci mature in Node |
-| Frontend | **React + TypeScript**, Vite, React Router, TanStack Query, react-hook-form, componente accesibile (React Aria) | WCAG 2.1 AA |
-| Autentificare | sesiuni server-side (cookie HttpOnly) + parola argon2id + TOTP; OIDC optional | un portal intern; revocare imediata a sesiunii |
+| Frontend | **React + TypeScript**, Vite, React Router, TanStack Query, HTML semantic si CSS propriu (fara biblioteca de componente) | WCAG 2.1 AA |
+| Autentificare | sesiuni server-side (cookie HttpOnly, SameSite) + parola scrypt + TOTP; OIDC planificat | un portal intern; revocare imediata a sesiunii |
 | Observabilitate | loguri JSON (pino), metrici Prometheus, `/health` si `/ready` | prompt, sectiunea 13 |
 
-## 2. Structura repository-ului
+## 2. Structura repository-ului (implementata)
 
 ```
-flux-am/
+adr/
 ├── apps/
-│   ├── api/                      # NestJS: REST API + OpenAPI
-│   │   └── src/
-│   │       ├── identity/         # utilizatori, roluri, inlocuiri, sesiuni, 2FA
-│   │       ├── access/           # politica de acces pe proces/pas/instanta/camp
-│   │       ├── audit/            # scriere in jurnal, verificarea lantului
-│   │       ├── reference/        # programe, apeluri, beneficiari, proiecte, nomenclatoare
-│   │       ├── workflow/         # Modulul 1: definitii, instante, sarcini, tranzitii
-│   │       ├── forms/            # Modulul 2: campuri, liste de articole, validari, precompletare
-│   │       ├── checklists/       # liste de verificare si raspunsuri
-│   │       ├── documents/        # fisiere, versiuni, sabloane, generare
-│   │       ├── registry/         # Modulul 3: registre, inregistrari, emitenti, clasare
-│   │       ├── deadlines/        # Modulul 4: calendar, termene, suspendari, escaladari
-│   │       ├── signing/          # Modulul 5: cereri de semnare, adaptoare, validare
-│   │       ├── integrations/
-│   │       │   └── anaf/         # interogare dupa CUI
-│   │       ├── reporting/        # tablou de bord, exporturi XLSX, vederi pentru Power BI
-│   │       └── packages/         # P1, P2, P5: definitii, sabloane, liste, automatizari specifice
-│   └── worker/                   # pg-boss: termene, reamintiri, generare PDF, email
-│   └── web/                      # React: Panoul meu, Dosare, Dosarul, Registre, Tablou, Administrare
+│   ├── api/                      # Fastify: REST API + OpenAPI (/api/docs), serveste si interfata web
+│   │   ├── src/
+│   │   │   ├── auth/             # sesiuni, parole (scrypt), TOTP, criptarea secretelor
+│   │   │   ├── identity/         # utilizatorul curent: roluri active, inlocuiri
+│   │   │   ├── access/           # drepturi pe dosar (instance_acl)
+│   │   │   ├── audit/            # scriere in jurnalul cu lant de hash-uri
+│   │   │   ├── workflow/         # Modulul 1: motorul de flux, sarcini, rutele dosarelor
+│   │   │   ├── forms/            # Modulul 2: valori cu provenienta, liste de articole, campuri calculate
+│   │   │   ├── documents/        # stocare, sabloane DOCX, conversie PDF, versiuni
+│   │   │   ├── registry/         # Modulul 3: registre, numerotare, emitenti, export
+│   │   │   ├── deadlines/        # Modulul 4: termene, suspendari, reamintiri, escaladare
+│   │   │   ├── signing/          # Modulul 5: furnizor de semnatura (interfata), validare DSS
+│   │   │   ├── integrations/anaf # interogare ANAF dupa CUI
+│   │   │   ├── reference/        # beneficiari, proiecte, import XLSX, nomenclatoare
+│   │   │   ├── reporting/        # tablou de bord, export XLSX
+│   │   │   ├── admin/            # utilizatori, roluri, calendar, termene, definitii, sabloane, audit
+│   │   │   ├── jobs/             # outbox: generare documente, e-mail, apeluri REST
+│   │   │   ├── seed/             # instalare initiala + date demo + sabloanele DOCX implicite
+│   │   │   ├── main.ts           # API (cluster pe nuclee)
+│   │   │   └── worker.ts         # joburi si scanarea termenelor
+│   │   └── test/                 # teste de integrare pe PostgreSQL real (P1 cap-coada, fluxuri)
+│   └── web/                      # React: Panoul meu, Dosare, Dosarul, Registre, Tablou, Administrare, Cont
 ├── packages/
-│   ├── process-schema/           # JSON Schema pentru definitii de proces + tipuri TS generate
-│   ├── working-days/             # calcul zile lucratoare si termene (fara dependente, testat separat)
-│   ├── validators/               # CUI, IBAN, cod SMIS, sume RON – folosite si in API si in UI
-│   └── ui/                       # componente accesibile comune
+│   ├── process-schema/           # JSON Schema + tipuri + validare definitii + reguli JSONLogic
+│   ├── working-days/             # calendar si termene (fara dependente)
+│   └── validators/               # CUI, IBAN, cod SMIS, sume in bani (BigInt), formate RO
+├── processes/                    # pachetele P1, P2, P5: process.json + checklist.json
 ├── db/
-│   ├── schema.sql                # schema de pornire (devine prima migrare)
-│   ├── migrations/
-│   └── seed/                     # sarbatori legale, roluri, termene (to_validate), pachete P1/P2/P5
-├── examples/
-│   └── process-p1.json           # definitia procesului P1 (forma propusa)
-├── deploy/
-│   ├── docker-compose.yml        # api, worker, web, postgres, seaweedfs, libreoffice, dss
-│   └── ghid-instalare.md         # max. 2 pagini
+│   ├── migrations/               # SQL, aplicate automat la pornire
+│   └── tests/verify-schema.sh    # garantii ale schemei (numerotare, audit, imutabilitate)
+├── deploy/                       # docker-compose.yml, .env.example, backup/restore, ghid de instalare
 ├── tests/
-│   ├── e2e/                      # Playwright: P1 cap-coada
-│   └── load/                     # k6: 200 de utilizatori, deschidere dosar < 1 s
+│   ├── e2e/                      # Playwright: dosar P1 prin interfata, cu patru utilizatori
+│   └── load/                     # test de incarcare: deschiderea dosarului la 200 de utilizatori
 └── docs/
 ```
 
-Monorepo cu **pnpm workspaces**; `packages/*` nu depind de NestJS sau React, ca sa poata fi
-testate unitar si folosite in ambele parti.
+Monorepo cu **pnpm workspaces**. Pachetele din `packages/` sunt TypeScript sursa (fara pas de
+build), folosite de API (prin `tsx`) si de interfata (prin Vite).
 
 ## 3. Componente si licente
 
@@ -71,12 +69,12 @@ Regula din prompt: nicio componenta cu licenta care interzice revanzarea ca serv
 | Componenta | Licenta | Observatie |
 |---|---|---|
 | PostgreSQL | PostgreSQL License | – |
-| NestJS, React, Kysely, pg-boss, docxtemplater (core) | MIT | modulele platite docxtemplater nu sunt necesare in Faza 1 |
+| Fastify, React, pg, docxtemplater (core), json-logic-js, ajv, exceljs, pdf-lib | MIT | modulele platite docxtemplater nu sunt necesare |
+| Gotenberg | MIT | LibreOffice prin HTTP, container separat |
 | LibreOffice | MPL 2.0 | rulat ca proces separat, nemodificat |
 | EU DSS | LGPL 2.1 | rulat ca serviciu separat, nemodificat |
-| SeaweedFS | Apache 2.0 | stocare S3 in docker-compose |
 | **MinIO** | AGPL v3 | **evitat ca implicit**: in 2025 a oprit distributia de binare/imagini pentru editia comunitara si a scos consola de administrare; clientul il poate folosi daca il are deja (interfata S3) |
-| **Redis** | RSAL/SSPL (7.4), AGPL (8.x) | **evitat**: pg-boss inlocuieste coada; daca va fi nevoie, Valkey (BSD) |
+| **Redis** | RSAL/SSPL (7.4), AGPL (8.x) | **evitat**: coada este pe PostgreSQL; daca va fi nevoie, Valkey (BSD) |
 | Camunda 7 CE | – | final de viata oct. 2025, de aceea nu e optiune |
 | n8n | Sustainable Use | interzice revanzarea ca serviciu, exclus |
 

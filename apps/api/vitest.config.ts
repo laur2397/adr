@@ -16,6 +16,7 @@ export default defineConfig({
       STORAGE_DIR: join(tmpdir(), 'flux-test-storage'),
       APP_KEY: Buffer.alloc(32, 7).toString('base64'),
       SMTP_URL: '',
+      GOTENBERG_URL: process.env.GOTENBERG_URL ?? '',
     },
   },
 });
