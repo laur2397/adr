@@ -135,7 +135,7 @@ export function Dashboard() {
               {d.stepTimes.map((x: any, i: number) => (
                 <tr key={i}>
                   <td>{x.process}</td>
-                  <td>{x.step_key}</td>
+                  <td>{x.step_name}</td>
                   <td className="num">{x.passes}</td>
                   <td className="num">{String(x.avg_days).replace('.', ',')}</td>
                   <td className="num">{String(x.max_days).replace('.', ',')}</td>

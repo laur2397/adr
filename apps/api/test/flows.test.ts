@@ -229,3 +229,17 @@ describe('authentication and access', () => {
     expect(download.headers['x-content-sha256']).toBe(version.sha256);
   });
 });
+
+describe('management dashboard and exports', () => {
+  it('works with empty filters (as the interface sends them) and refuses non-managers', async () => {
+    const d = await as.director!.ok('GET', '/dashboard?from=&to=');
+    expect(d.volume.length).toBeGreaterThan(0);
+    expect(d.workload.length).toBeGreaterThan(0);
+    const filtered = await as.director!.ok('GET', '/dashboard?from=2026-01-01&to=2026-12-31&definition=p1_payment_request_check');
+    expect(filtered.deadlines).toBeDefined();
+    expect((await as.evf1!.req('GET', '/dashboard')).statusCode).toBe(403);
+    const xlsx = await as.director!.req('GET', '/exports/instances.xlsx');
+    expect(xlsx.statusCode).toBe(200);
+    expect(xlsx.rawPayload.subarray(0, 2).toString()).toBe('PK');
+  });
+});

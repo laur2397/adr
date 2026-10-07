@@ -12,9 +12,10 @@ export async function reportingRoutes(app: FastifyInstance) {
     if (!hasRole(user, 'head_of_unit', 'director', 'functional_admin', 'auditor')) throw forbidden('Tabloul de bord este disponibil conducerii.');
     const pool = getPool();
     const org = user.organizationId;
-    const from = req.query.from ?? null;
-    const to = req.query.to ?? null;
-    const def = req.query.definition ?? null;
+    // Empty filters (from=&to=) mean "no filter".
+    const from = req.query.from || null;
+    const to = req.query.to || null;
+    const def = req.query.definition || null;
     const workload = await query(
       pool,
       `select u.id, u.full_name, count(t.id)::int as open_tasks,
@@ -43,13 +44,15 @@ export async function reportingRoutes(app: FastifyInstance) {
     );
     const stepTimes = await query(
       pool,
-      `select d.name as process, h.step_key, count(*)::int as passes,
+      `select d.name as process, h.step_key,
+              coalesce((select st->>'name' from jsonb_array_elements(d.definition->'steps') st where st->>'key' = h.step_key), h.step_key) as step_name,
+              count(*)::int as passes,
               round(avg(extract(epoch from h.left_at - h.entered_at) / 86400)::numeric, 2) as avg_days,
               round(max(extract(epoch from h.left_at - h.entered_at) / 86400)::numeric, 2) as max_days
          from step_history h join instance i on i.id = h.instance_id join process_definition d on d.id = i.definition_id
         where i.organization_id = $1 and h.left_at is not null and h.actor_user_id is not null
           and ($2::date is null or h.entered_at >= $2) and ($3::date is null or h.entered_at < $3::date + 1) and ($4::text is null or d.key = $4)
-        group by d.name, h.step_key order by d.name, avg_days desc`,
+        group by d.name, d.definition, h.step_key order by d.name, avg_days desc`,
       [org, from, to, def],
     );
     const blocked = await query(

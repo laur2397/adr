@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from '../api';
 import { fmtDate, fmtDateTime } from '../format';
-import { Badge, Card, Empty, ErrorAlert, Loading } from './ui';
+import { Badge, Card, Empty, ErrorAlert, Loading, useMe } from './ui';
 
 const ANSWER_LABEL: Record<string, string> = { DA: 'Da', NU: 'Nu', NA: 'N/A', DA_CU_OBS: 'Da, cu observații' };
 const VERIFIER_LABEL: Record<string, string> = { primary: 'Verificare (EVF)', second: 'A doua verificare (EI)' };
@@ -131,6 +131,7 @@ const SIG_TONE: Record<string, 'green' | 'yellow' | 'gray' | 'red' | 'blue'> = {
 const SIG_LABEL: Record<string, string> = { signed: 'semnat', pending: 'în curs', invalidated: 'invalidată', rejected: 'refuzată', external: 'semnătură existentă' };
 
 export function DocumentsPanel({ instance, signable, canEdit }: { instance: any; signable: string[]; canEdit: boolean }) {
+  const me = useMe();
   const qc = useQueryClient();
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['instance', instance.id] });
@@ -171,6 +172,7 @@ export function DocumentsPanel({ instance, signable, canEdit }: { instance: any;
       {instance.documents.map((d: any) => {
         const latest = d.versions[0];
         const valid = d.signatures.filter((s: any) => s.status === 'signed' || s.status === 'external');
+        const signedByMe = d.signatures.some((s: any) => s.status === 'signed' && s.signer_user_id === me.id);
         return (
           <Card
             key={d.id}
@@ -200,7 +202,8 @@ export function DocumentsPanel({ instance, signable, canEdit }: { instance: any;
                     {generate.isPending && generate.variables === d.key ? 'Se generează…' : 'Regenerează'}
                   </button>
                 )}
-                {isActive && signable.includes(d.key) && (
+                {isActive && signable.includes(d.key) && signedByMe && <Badge tone="green">Semnat de dumneavoastră</Badge>}
+                {isActive && signable.includes(d.key) && !signedByMe && (
                   <button className="primary small" disabled={sign.isPending} onClick={() => sign.mutate(d.key)}>
                     {sign.isPending && sign.variables === d.key ? 'Se semnează…' : 'Semnează'}
                   </button>

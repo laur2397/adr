@@ -23,6 +23,7 @@ function Circuit({ steps }: { steps: any[] }) {
               </span>
             )}
             {s.state === 'current' && <span className="sr-only"> (pasul curent)</span>}
+            {s.state === 'skipped' && <span className="who">nu a fost cazul</span>}
           </span>
         </li>
       ))}

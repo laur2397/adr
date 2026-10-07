@@ -152,6 +152,7 @@ button.small, .button.small { padding: 0.2rem 0.55rem; min-height: 28px; font-si
 .circuit li + li::before { content: ''; width: 18px; height: 2px; background: var(--c-border-strong); margin: 0 4px; }
 .circuit .step { padding: 0.3rem 0.6rem; border-radius: var(--radius); border: 1px solid var(--c-border); background: #fff; }
 .circuit .step.done { background: var(--c-success-soft); border-color: #a9d5b4; }
+.circuit .step.skipped { color: var(--c-text-muted); border-style: dashed; background: transparent; }
 .circuit .step.current { background: var(--c-primary); color: #fff; border-color: var(--c-primary); font-weight: 600; }
 .circuit .step .who { display: block; font-size: 0.75rem; opacity: 0.85; }
 

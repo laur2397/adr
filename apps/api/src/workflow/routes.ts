@@ -52,7 +52,7 @@ async function circuit(ctx: InstanceContext) {
           key: s.key,
           name: s.name,
           type: s.type,
-          state: activeKeys.has(s.key) && ctx.instance.status === 'active' ? 'current' : last ? 'done' : 'pending',
+          state: activeKeys.has(s.key) && ctx.instance.status === 'active' ? 'current' : last ? 'done' : ctx.instance.status === 'active' ? 'pending' : 'skipped',
           lastActor: last?.actor_name ?? null,
           onBehalfOf: last?.on_behalf_of_name ?? null,
           lastAt: last?.left_at ?? last?.entered_at ?? null,
