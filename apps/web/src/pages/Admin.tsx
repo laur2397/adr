@@ -4,6 +4,7 @@ import { NavLink, Route, Routes } from 'react-router';
 import { api, can } from '../api';
 import { Badge, Card, Empty, ErrorAlert, Loading, Modal, useMe } from '../components/ui';
 import { ROLE_LABEL, fmtDate, fmtDateTime } from '../format';
+import { ProcessDiagram } from '../components/ProcessDiagram';
 
 function Users() {
   const qc = useQueryClient();
@@ -302,6 +303,14 @@ function Processes() {
           {problems && (problems.length ? (
             <div className="alert error"><strong>Probleme găsite:</strong><ul>{problems.map((p, i) => <li key={i}><span className="mono">{p.path}</span> {p.message}</li>)}</ul></div>
           ) : <div className="alert success small">Definiția este validă.</div>)}
+          {(() => {
+            try {
+              const parsed = JSON.parse(json);
+              return Array.isArray(parsed.steps) ? <div style={{ marginBottom: 12 }}><ProcessDiagram steps={parsed.steps} /></div> : null;
+            } catch {
+              return null;
+            }
+          })()}
           <label className="sr-only" htmlFor="def-json">Definiție JSON</label>
           <textarea id="def-json" className="mono" style={{ minHeight: 480, fontSize: 13 }} value={json} onChange={(e) => setJson(e.target.value)} spellCheck={false} />
         </Card>
@@ -427,6 +436,100 @@ function Audit() {
   );
 }
 
+function Integrations() {
+  const qc = useQueryClient();
+  const tokens = useQuery({ queryKey: ['api-tokens'], queryFn: () => api.get('/admin/api-tokens') });
+  const hooks = useQuery({ queryKey: ['webhooks'], queryFn: () => api.get('/admin/webhooks') });
+  const users = useQuery({ queryKey: ['users'], queryFn: () => api.get('/users') });
+  const [secret, setSecret] = useState<string | null>(null);
+  const createToken = useMutation({ mutationFn: (b: unknown) => api.post('/admin/api-tokens', b), onSuccess: (r: any) => (setSecret(`Token: ${r.token}`), qc.invalidateQueries({ queryKey: ['api-tokens'] })) });
+  const revoke = useMutation({ mutationFn: (id: string) => api.del(`/admin/api-tokens/${id}`), onSuccess: () => qc.invalidateQueries({ queryKey: ['api-tokens'] }) });
+  const createHook = useMutation({ mutationFn: (b: unknown) => api.post('/admin/webhooks', b), onSuccess: (r: any) => (setSecret(`Secret webhook (pentru verificarea semnăturii HMAC): ${r.secret}`), qc.invalidateQueries({ queryKey: ['webhooks'] })) });
+  const toggle = useMutation({ mutationFn: (h: any) => api.patch(`/admin/webhooks/${h.id}`, { active: !h.active }), onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks'] }) });
+  return (
+    <div className="stack">
+      {secret && (
+        <div className="alert warning">
+          <strong>Copiați acum valoarea de mai jos; nu va mai fi afișată.</strong>
+          <div className="mono" style={{ wordBreak: 'break-all', marginTop: 6 }}>{secret}</div>
+        </div>
+      )}
+      <ErrorAlert error={createToken.error ?? createHook.error ?? revoke.error} />
+      <Card title="Tokenuri API (Power BI, alte sisteme)" flush>
+        <form
+          className="form-grid"
+          style={{ padding: '1rem' }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = Object.fromEntries(new FormData(e.currentTarget));
+            createToken.mutate({ name: f.name, userId: f.userId, expiresAt: f.expiresAt || undefined });
+          }}
+        >
+          <label className="field"><span className="label">Nume</span><input name="name" required placeholder="ex. Power BI conducere" /></label>
+          <label className="field">
+            <span className="label">Acționează ca utilizatorul</span>
+            <select name="userId" required>
+              {users.data?.items.map((u: any) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+            </select>
+          </label>
+          <label className="field"><span className="label">Expiră la</span><input type="date" name="expiresAt" /></label>
+          <div className="wide"><button type="submit">Generează token</button> <span className="small muted">Folosire: antetul <span className="mono">Authorization: Bearer flx_…</span>; documentația la <a href="/api/docs" target="_blank" rel="noopener">/api/docs</a>.</span></div>
+        </form>
+        <table className="data">
+          <thead><tr><th>Nume</th><th>Acționează ca</th><th>Ultima folosire</th><th>Stare</th><th /></tr></thead>
+          <tbody>
+            {tokens.data?.items.map((t: any) => (
+              <tr key={t.id}>
+                <td>{t.name}<div className="small muted">creat de {t.created_by_name}, {fmtDateTime(t.created_at)}</div></td>
+                <td>{t.acts_as}</td>
+                <td>{fmtDateTime(t.last_used_at) || '—'}</td>
+                <td>{t.revoked_at ? <Badge>revocat</Badge> : <Badge tone="green">activ</Badge>}</td>
+                <td>{!t.revoked_at && <button className="small danger" onClick={() => revoke.mutate(t.id)}>Revocă</button>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+      <Card title="Webhook-uri (notificări către alte sisteme)" flush>
+        <form
+          className="form-grid"
+          style={{ padding: '1rem' }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            createHook.mutate({ name: fd.get('name'), url: fd.get('url'), events: fd.getAll('events') });
+          }}
+        >
+          <label className="field"><span className="label">Nume</span><input name="name" required /></label>
+          <label className="field"><span className="label">Adresă (URL)</span><input name="url" required placeholder="https://…" /></label>
+          <fieldset className="wide" style={{ border: 0, padding: 0 }}>
+            <legend className="field-label">Evenimente</legend>
+            <div className="row">
+              {hooks.data?.events.map((ev: string) => (
+                <label key={ev} className="row small"><input type="checkbox" name="events" value={ev} /> <span className="mono">{ev}</span></label>
+              ))}
+            </div>
+          </fieldset>
+          <div className="wide"><button type="submit">Adaugă webhook</button></div>
+        </form>
+        <table className="data">
+          <thead><tr><th>Nume</th><th>Evenimente</th><th className="num">Livrate / eșuate</th><th>Stare</th></tr></thead>
+          <tbody>
+            {hooks.data?.items.map((h: any) => (
+              <tr key={h.id}>
+                <td>{h.name}<div className="small muted mono">{h.url}</div></td>
+                <td className="small mono">{h.events.join(', ')}</td>
+                <td className="num">{h.delivered} / {h.failed}</td>
+                <td><button className="small" onClick={() => toggle.mutate(h)}>{h.active ? 'Activ – oprește' : 'Oprit – pornește'}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
 export function Admin() {
   const me = useMe();
   const items: Array<[string, string, boolean]> = [
@@ -437,6 +540,7 @@ export function Admin() {
     ['liste', 'Liste de verificare', can.admin(me)],
     ['sabloane', 'Șabloane', can.admin(me)],
     ['import', 'Import proiecte', can.admin(me)],
+    ['integrari', 'Integrări', can.integrations(me)],
     ['audit', 'Audit', me.roles.some((r) => ['auditor', 'functional_admin'].includes(r))],
   ];
   const visible = items.filter(([, , show]) => show);
@@ -459,6 +563,7 @@ export function Admin() {
         <Route path="sabloane" element={<Templates />} />
         <Route path="import" element={<ImportProjects />} />
         <Route path="audit" element={<Audit />} />
+        <Route path="integrari" element={<Integrations />} />
       </Routes>
     </div>
   );

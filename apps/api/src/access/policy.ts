@@ -68,7 +68,7 @@ export async function grant(
 }
 
 /** Roles that see every dossier of their organization (read-only). */
-export const SUPERVISOR_ROLES = ['director', 'head_of_unit', 'auditor'];
+export const SUPERVISOR_ROLES = ['director', 'head_of_unit', 'auditor', 'functional_admin'];
 
 export function isAdmin(user: CurrentUser): boolean {
   return hasRole(user, 'functional_admin');

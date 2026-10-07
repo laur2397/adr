@@ -21,6 +21,7 @@ import { actorOf, type CurrentUser } from '../identity/context.js';
 import { notifyUsers, usersWithRole } from '../notifications/service.js';
 import { createEntry, lastEntryForInstance, upsertCorrespondent } from '../registry/service.js';
 import { invalidateSignaturesSince } from '../signing/invalidate.js';
+import { assertCoiDeclared } from '../controls/coi.js';
 import { loadInstance, type InstanceContext } from './load.js';
 import { actingAs, type TaskRow } from './tasks.js';
 
@@ -91,7 +92,9 @@ async function resolveAssignment(run: Run, step: StepDef): Promise<Assignee> {
     if (!roleKey) throw new AppError(500, `Pasul „${step.name}” nu are un rol pentru repartizare.`);
     return { ...none, candidateRoleId: await roleId(db, org, roleKey) };
   };
-  if (step.type === 'start') return { ...none, assigneeUserId: run.actor.userId };
+  // The start step belongs to whoever opens the dossier, unless the dossier was opened by another
+  // process (sub-flow) and the step names who handles it.
+  if (step.type === 'start' && !(a && ctx.instance.parent_instance_id)) return { ...none, assigneeUserId: run.actor.userId };
   if (!a) return queue(undefined);
   switch (a.rule) {
     case 'role_queue':
@@ -258,6 +261,8 @@ async function runAction(run: Run, a: Action) {
       return;
     case 'register': {
       const direction = a.direction as 'in' | 'out' | 'internal';
+      // once: keep the number already given (e.g. a decision numbered before signing, then returned).
+      if (a.once && (await lastEntryForInstance(db, instanceId, String(a.register), direction))) return;
       const related =
         a.relatedTo === 'previous_out' || a.relatedTo === 'previous_in'
           ? await lastEntryForInstance(db, instanceId, String(a.register), a.relatedTo === 'previous_out' ? 'out' : 'in')
@@ -333,14 +338,113 @@ async function runAction(run: Run, a: Action) {
       await audit(db, actor, { action: 'project.budget_lines.update', entityType: 'project', entityId: ctx.project.id, newValue: Object.fromEntries(byLine) });
       return;
     }
+    case 'create_debt': {
+      // Debt security (titlu de creanta) in the debtor ledger; its number comes from the debtors register.
+      if (!ctx.beneficiary) throw new AppError(422, 'Dosarul nu are beneficiar; titlul de creanță nu poate fi emis.');
+      const { fields } = await ruleData(run);
+      const principal = fields[String(a.principal)];
+      const dueDate = fields[String(a.dueDate)];
+      if (!principal || !dueDate) throw unprocessable('Completați suma și scadența titlului de creanță.');
+      const existing = await maybeOne(db, `select id from debt where instance_id = $1 and status <> 'cancelled'`, [instanceId]);
+      if (existing) return;
+      const entry = await createEntry(db, actor, {
+        registerKey: 'debtors',
+        direction: 'internal',
+        subject: `Titlu de creanță – ${ctx.beneficiary.name}`,
+        instanceId,
+      });
+      const debt = await one(
+        db,
+        `insert into debt (organization_id, instance_id, project_id, beneficiary_id, title_number, title_date, due_date, principal, accessories, reason, created_by)
+         values ($1, $2, $3, $4, $5, $11, $6, $7, $8, $9, $10) returning id`,
+        [
+          ctx.instance.organization_id, instanceId, ctx.project?.id ?? null, ctx.beneficiary.id, entry.number_display, dueDate, principal,
+          a.accessories ? (fields[String(a.accessories)] ?? 0) : 0, String(fields[String(a.reason)] ?? a.reason), actor.userId, today(),
+        ],
+      );
+      await saveField(db, instanceId, 'debt_title_number', entry.number_display, 'calculated', actor.userId);
+      await audit(db, actor, { action: 'debt.create', entityType: 'debt', entityId: debt.id, newValue: { title: entry.number_display, principal, dueDate } });
+      return;
+    }
+    case 'update_project': {
+      // Only contractual data an addendum can change.
+      const allowed = ['end_date', 'total_value', 'eligible_value', 'non_reimbursable_value', 'contract_number'];
+      if (!ctx.project) return;
+      const { fields } = await ruleData(run);
+      const set = (a.set as Record<string, string>) ?? {};
+      const old: Record<string, unknown> = {};
+      const changed: Record<string, unknown> = {};
+      for (const [column, fieldKey] of Object.entries(set)) {
+        if (!allowed.includes(column)) throw new AppError(500, `update_project: coloana „${column}” nu poate fi modificată.`);
+        const value = fields[fieldKey];
+        if (value === null || value === undefined || value === '') continue;
+        old[column] = ctx.project[column];
+        changed[column] = value;
+        await query(db, `update project set ${column} = $2 where id = $1`, [ctx.project.id, value]);
+      }
+      if (Object.keys(changed).length) {
+        await audit(db, actor, { action: 'project.update', entityType: 'project', entityId: ctx.project.id, oldValue: old, newValue: changed });
+      }
+      return;
+    }
     case 'request_signatures':
       return; // signatures are requested by requiresSignatures on paths; kept for definitions that list it
     case 'call_rest':
       await enqueue(db, 'call_rest', { instanceId, url: a.url, method: a.method ?? 'POST' });
       return;
-    case 'start_subflow':
-      throw new AppError(422, 'Sub-fluxurile nu sunt disponibile în această versiune.');
+    case 'start_subflow': {
+      // Starts a related dossier without waiting for it (e.g. an irregularity file from a verification).
+      await startChild(run, String(a.subflow), (a.inputs as Record<string, string> | undefined) ?? {});
+      return;
+    }
   }
+}
+
+async function startChild(run: Run, definitionKey: string, inputs: Record<string, string>): Promise<string> {
+  if (!run.user) throw new AppError(500, 'Un sub-flux poate fi pornit doar de o acțiune a unui utilizator.');
+  const { values } = await loadFields(run.db, run.ctx.instance.id);
+  const fields: Record<string, unknown> = {};
+  // "=value" passes a constant (e.g. the source of an irregularity), otherwise a parent field.
+  for (const [childKey, parentKey] of Object.entries(inputs)) fields[childKey] = parentKey.startsWith('=') ? parentKey.slice(1) : (values[parentKey] ?? null);
+  const childId = await startInstance(run.db, run.user, {
+    definitionKey,
+    projectId: run.ctx.instance.project_id,
+    beneficiaryId: run.ctx.instance.beneficiary_id,
+    fields,
+    parentInstanceId: run.ctx.instance.id,
+  });
+  // Everyone who can see the parent dossier can see the child.
+  await query(
+    run.db,
+    `insert into instance_acl (instance_id, principal_type, principal_id, permission, reason)
+     select $1, principal_type, principal_id, 'view', 'parent' from instance_acl where instance_id = $2
+     on conflict do nothing`,
+    [childId, run.ctx.instance.id],
+  );
+  await audit(run.db, run.actor, { action: 'instance.subflow.start', entityType: 'instance', entityId: run.ctx.instance.id, newValue: { child: childId, definition: definitionKey } });
+  return childId;
+}
+
+/** When a child dossier ends, the parent execution waiting for it continues. */
+async function resumeParent(run: Run, childStatus: string): Promise<void> {
+  const waiting = await maybeOne(
+    run.db,
+    `select e.id, e.instance_id, e.step_key from execution e where e.child_instance_id = $1 and e.status = 'waiting_join' for update`,
+    [run.ctx.instance.id],
+  );
+  if (!waiting) return;
+  const parentCtx = await loadInstance(run.db, waiting.instance_id, true);
+  const parentRun: Run = { ...run, ctx: parentCtx, hops: run.hops };
+  const step = findStep(parentCtx.def, waiting.step_key);
+  const { values } = await loadFields(run.db, run.ctx.instance.id);
+  for (const [parentKey, childKey] of Object.entries(step.outputs ?? {})) {
+    const value = childKey === '$status' ? childStatus : (values[childKey] ?? null);
+    await saveField(run.db, parentCtx.instance.id, parentKey, value, 'calculated', run.actor.userId);
+  }
+  await query(run.db, `update execution set status = 'active', child_instance_id = null where id = $1`, [waiting.id]);
+  await closeHistory(parentRun, step.key, null, null, childStatus, null);
+  await enter(parentRun, waiting.id, step.next!);
+  await refreshCalculated(run.db, parentCtx.def, parentCtx.instance.id, { project: parentCtx.project, beneficiary: parentCtx.beneficiary });
 }
 
 /** Moves an execution into a step and runs it until it waits for a human or ends. */
@@ -428,10 +532,14 @@ async function enter(run: Run, executionId: string, stepKey: string): Promise<vo
       if (step.type === 'end_negative') await cancelDeadlines(db, ctx.instance.id);
       for (const d of ctx.def.deadlines ?? []) await stopDeadline(db, ctx.instance.id, d.key);
       await audit(db, run.actor, { action: 'instance.finish', entityType: 'instance', entityId: ctx.instance.id, newValue: { status } });
+      await resumeParent(run, status);
       return;
     }
-    case 'subflow':
-      throw new AppError(422, 'Sub-fluxurile nu sunt disponibile în această versiune.');
+    case 'subflow': {
+      const childId = await startChild(run, step.subflow!, step.inputs ?? {});
+      await query(db, `update execution set status = 'waiting_join', child_instance_id = $2 where id = $1`, [executionId, childId]);
+      return;
+    }
   }
 }
 
@@ -450,6 +558,7 @@ export interface StartInput {
   beneficiaryId?: string | null;
   title?: string | null;
   fields?: Record<string, unknown>;
+  parentInstanceId?: string | null;
 }
 
 /** Creates an instance on the published definition, prefills its fields and enters the start step. */
@@ -472,9 +581,9 @@ export async function startInstance(db: Db, user: CurrentUser, input: StartInput
   const title = input.title?.trim() || `${def.name}${project ? ` – SMIS ${project.smis_code}` : ''}`;
   const inst = await one(
     db,
-    `insert into instance (organization_id, definition_id, title, project_id, beneficiary_id, program_id, responsible_user_id, started_by)
-     values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
-    [user.organizationId, defRow.id, title, project?.id ?? null, beneficiaryId, project?.program_id ?? null, project?.responsible_expert_id ?? null, user.id],
+    `insert into instance (organization_id, definition_id, title, project_id, beneficiary_id, program_id, responsible_user_id, started_by, parent_instance_id)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id`,
+    [user.organizationId, defRow.id, title, project?.id ?? null, beneficiaryId, project?.program_id ?? null, project?.responsible_expert_id ?? null, user.id, input.parentInstanceId ?? null],
   );
   const ctx = await loadInstance(db, inst.id, true);
   const run: Run = { db, ctx, user, actor: actorOf(user) as AuditActor & { userId: string }, hops: 0 };
@@ -588,6 +697,7 @@ export async function transition(db: Db, user: CurrentUser, input: TransitionInp
   const onBehalfOf = acting.onBehalfOf;
   const effective = onBehalfOf ?? user.id;
   const step = findStep(ctx.def, task.step_key);
+  await assertCoiDeclared(db, ctx.def, step.key, ctx.instance.id, user.id);
   const path = (await visiblePaths(db, ctx, task, user)).find((p) => p.key === input.path);
   if (!path) throw unprocessable('Acțiunea aleasă nu este disponibilă în acest moment.');
   const comment = input.comment?.trim() || null;
@@ -679,6 +789,7 @@ export async function claimTask(db: Db, user: CurrentUser, taskId: string) {
   if (!task) throw notFound('Sarcina');
   if (task.assignee_user_id) throw unprocessable('Sarcina este deja preluată.');
   if (!actingAs(user, task, task.definition.key).ok) throw forbidden('Sarcina nu este în coada dumneavoastră.');
+  await assertCoiDeclared(db, task.definition, task.step_key, task.instance_id, user.id);
   await query(db, `update task set assignee_user_id = $2 where id = $1`, [taskId, user.id]);
   await grant(db, task.instance_id, 'user', user.id, 'edit', 'assignee', user.id);
   await audit(db, actorOf(user), { action: 'task.claim', entityType: 'task', entityId: taskId });

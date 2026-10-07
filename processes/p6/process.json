@@ -1,0 +1,624 @@
+{
+  "schemaVersion": 1,
+  "key": "p6_necessity_payment",
+  "name": "Referat de necesitate, angajare și ordonanțare la plată",
+  "description": "Pachetul P6: referatul de necesitate cu TVA calculat, aprobarea ierarhică, viza CFPP la angajare, recepția și factura, ordonanțarea, viza CFPP la plată și ordinul de plată (angajare – lichidare – ordonanțare – plată).",
+  "subject": {
+    "requires": []
+  },
+  "fields": [
+    {
+      "key": "purpose",
+      "label": "Obiectul referatului",
+      "type": "textarea"
+    },
+    {
+      "key": "justification",
+      "label": "Necesitatea și oportunitatea",
+      "type": "textarea"
+    },
+    {
+      "key": "funding_source",
+      "label": "Sursa de finanțare",
+      "type": "choice",
+      "nomenclature": "funding_source"
+    },
+    {
+      "key": "budget_line",
+      "label": "Indicator bugetar (clasificație)",
+      "type": "text"
+    },
+    {
+      "key": "items",
+      "label": "Produse / servicii",
+      "type": "line_items",
+      "columns": [
+        {
+          "key": "description",
+          "label": "Denumire",
+          "type": "text"
+        },
+        {
+          "key": "quantity",
+          "label": "Cantitate",
+          "type": "integer"
+        },
+        {
+          "key": "unit_price",
+          "label": "Preț unitar fără TVA",
+          "type": "amount"
+        },
+        {
+          "key": "vat_rate",
+          "label": "Cotă TVA (%)",
+          "type": "percent"
+        },
+        {
+          "key": "net",
+          "label": "Valoare fără TVA",
+          "type": "calculated",
+          "resultType": "amount",
+          "total": true,
+          "formula": {
+            "amount_mul": [
+              {
+                "var": "row.unit_price"
+              },
+              {
+                "var": "row.quantity"
+              }
+            ]
+          }
+        },
+        {
+          "key": "vat",
+          "label": "TVA",
+          "type": "calculated",
+          "resultType": "amount",
+          "total": true,
+          "formula": {
+            "amount_mul": [
+              {
+                "amount_mul": [
+                  {
+                    "var": "row.unit_price"
+                  },
+                  {
+                    "var": "row.quantity"
+                  }
+                ]
+              },
+              {
+                "/": [
+                  {
+                    "var": "row.vat_rate"
+                  },
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "key": "gross",
+          "label": "Valoare cu TVA",
+          "type": "calculated",
+          "resultType": "amount",
+          "total": true,
+          "formula": {
+            "amount_add": [
+              {
+                "amount_mul": [
+                  {
+                    "var": "row.unit_price"
+                  },
+                  {
+                    "var": "row.quantity"
+                  }
+                ]
+              },
+              {
+                "amount_mul": [
+                  {
+                    "amount_mul": [
+                      {
+                        "var": "row.unit_price"
+                      },
+                      {
+                        "var": "row.quantity"
+                      }
+                    ]
+                  },
+                  {
+                    "/": [
+                      {
+                        "var": "row.vat_rate"
+                      },
+                      100
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "rowValidations": [
+        {
+          "rule": {
+            ">": [
+              {
+                "var": "row.quantity"
+              },
+              0
+            ]
+          },
+          "message": "Cantitatea trebuie să fie mai mare decât 0."
+        },
+        {
+          "rule": {
+            "amount_gte": [
+              {
+                "var": "row.unit_price"
+              },
+              "0.01"
+            ]
+          },
+          "message": "Completați prețul unitar."
+        }
+      ]
+    },
+    {
+      "key": "total_net",
+      "label": "Total fără TVA",
+      "type": "calculated",
+      "resultType": "amount",
+      "formula": {
+        "amount_sum": [
+          {
+            "var": "fields.items"
+          },
+          "net"
+        ]
+      }
+    },
+    {
+      "key": "total_vat",
+      "label": "Total TVA",
+      "type": "calculated",
+      "resultType": "amount",
+      "formula": {
+        "amount_sum": [
+          {
+            "var": "fields.items"
+          },
+          "vat"
+        ]
+      }
+    },
+    {
+      "key": "total",
+      "label": "Total cu TVA (angajament)",
+      "type": "calculated",
+      "resultType": "amount",
+      "formula": {
+        "amount_sum": [
+          {
+            "var": "fields.items"
+          },
+          "gross"
+        ]
+      }
+    },
+    {
+      "key": "supplier_name",
+      "label": "Furnizor",
+      "type": "text"
+    },
+    {
+      "key": "supplier_cui",
+      "label": "CUI furnizor",
+      "type": "text",
+      "format": "cui"
+    },
+    {
+      "key": "supplier_iban",
+      "label": "IBAN furnizor",
+      "type": "text",
+      "format": "iban"
+    },
+    {
+      "key": "invoice_no",
+      "label": "Factura nr.",
+      "type": "text"
+    },
+    {
+      "key": "invoice_date",
+      "label": "Data facturii",
+      "type": "date"
+    },
+    {
+      "key": "invoice_amount",
+      "label": "Valoarea facturii (cu TVA)",
+      "type": "amount"
+    },
+    {
+      "key": "reception_note",
+      "label": "Recepție (proces-verbal / bun de plată)",
+      "type": "textarea"
+    },
+    {
+      "key": "payment_order_no",
+      "label": "Ordin de plată nr.",
+      "type": "text"
+    },
+    {
+      "key": "payment_date",
+      "label": "Data plății",
+      "type": "date"
+    }
+  ],
+  "documents": [
+    {
+      "key": "necessity_report",
+      "template": "p6_necessity_report",
+      "docType": "necessity_report",
+      "signatureLevel": "advanced"
+    },
+    {
+      "key": "payment_authorization",
+      "template": "p6_payment_authorization",
+      "docType": "payment_authorization",
+      "signatureLevel": "qualified"
+    }
+  ],
+  "deadlines": [
+    {
+      "key": "payment",
+      "definition": "invoice_payment",
+      "startsAt": "reception",
+      "stopsAt": [
+        "done"
+      ]
+    }
+  ],
+  "separationOfDuties": [
+    {
+      "steps": [
+        "draft",
+        "cfpp_commitment"
+      ],
+      "message": "Cel care a întocmit referatul nu poate acorda viza CFPP."
+    },
+    {
+      "steps": [
+        "authorization",
+        "cfpp_payment"
+      ],
+      "message": "Cel care a întocmit ordonanțarea nu poate acorda viza CFPP."
+    }
+  ],
+  "steps": [
+    {
+      "key": "draft",
+      "type": "start",
+      "name": "Întocmire referat",
+      "fieldAccess": {
+        "purpose": "required",
+        "justification": "required",
+        "funding_source": "required",
+        "budget_line": "editable",
+        "items": "editable",
+        "supplier_name": "hidden",
+        "supplier_cui": "hidden",
+        "supplier_iban": "hidden",
+        "invoice_no": "hidden",
+        "invoice_date": "hidden",
+        "invoice_amount": "hidden",
+        "reception_note": "hidden",
+        "payment_order_no": "hidden",
+        "payment_date": "hidden"
+      },
+      "paths": [
+        {
+          "key": "submit",
+          "label": "Trimite la aprobare",
+          "to": "head_approval",
+          "requiresSignatures": [
+            "necessity_report"
+          ],
+          "validations": [
+            {
+              "rule": {
+                "amount_gte": [
+                  {
+                    "var": "fields.total"
+                  },
+                  "0.01"
+                ]
+              },
+              "message": "Adăugați cel puțin un produs sau serviciu cu valoare."
+            }
+          ],
+          "actions": [
+            {
+              "type": "register",
+              "register": "necessity_reports",
+              "direction": "internal"
+            }
+          ]
+        },
+        {
+          "key": "cancel",
+          "label": "Renunță la referat",
+          "to": "cancelled",
+          "kind": "reject",
+          "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "head_approval",
+      "type": "human",
+      "name": "Aprobare șef compartiment",
+      "assignment": {
+        "rule": "department_head",
+        "step": "draft"
+      },
+      "paths": [
+        {
+          "key": "approve",
+          "label": "Aprobă",
+          "to": "cfpp_commitment",
+          "requiresSignatures": [
+            "necessity_report"
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează",
+          "to": "draft",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "cfpp_commitment",
+      "type": "human",
+      "name": "Viza CFPP – angajament",
+      "assignment": {
+        "rule": "role_queue",
+        "role": "cfpp"
+      },
+      "fieldAccess": {
+        "budget_line": "editable"
+      },
+      "paths": [
+        {
+          "key": "grant",
+          "label": "Acordă viza (angajament)",
+          "to": "director_commitment",
+          "requiresSignatures": [
+            "necessity_report"
+          ],
+          "actions": [
+            {
+              "type": "register",
+              "register": "cfpp_visas",
+              "direction": "internal",
+              "subject": "Viză CFPP – angajament"
+            }
+          ]
+        },
+        {
+          "key": "refuse",
+          "label": "Refuză viza",
+          "to": "draft",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "director_commitment",
+      "type": "human",
+      "name": "Aprobare angajare cheltuială",
+      "assignment": {
+        "rule": "role_queue",
+        "role": "director"
+      },
+      "paths": [
+        {
+          "key": "approve",
+          "label": "Aprobă angajarea",
+          "to": "reception",
+          "requiresSignatures": [
+            "necessity_report"
+          ]
+        },
+        {
+          "key": "reject",
+          "label": "Respinge",
+          "to": "rejected",
+          "kind": "reject"
+        }
+      ]
+    },
+    {
+      "key": "reception",
+      "type": "human",
+      "name": "Recepție și factură (lichidare)",
+      "assignment": {
+        "rule": "previous_actor",
+        "step": "draft"
+      },
+      "fieldAccess": {
+        "supplier_name": "required",
+        "supplier_cui": "required",
+        "supplier_iban": "required",
+        "invoice_no": "required",
+        "invoice_date": "required",
+        "invoice_amount": "required",
+        "reception_note": "required",
+        "items": "visible"
+      },
+      "paths": [
+        {
+          "key": "submit",
+          "label": "Trimite la ordonanțare",
+          "to": "authorization",
+          "validations": [
+            {
+              "rule": {
+                "amount_lte": [
+                  {
+                    "var": "fields.invoice_amount"
+                  },
+                  {
+                    "var": "fields.total"
+                  }
+                ]
+              },
+              "message": "Factura depășește angajamentul aprobat. Este necesar un referat suplimentar."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "authorization",
+      "type": "human",
+      "name": "Ordonanțare la plată",
+      "assignment": {
+        "rule": "least_loaded",
+        "role": "accountant"
+      },
+      "onEnter": [
+        {
+          "type": "generate_document",
+          "document": "payment_authorization"
+        }
+      ],
+      "fieldAccess": {
+        "invoice_amount": "editable",
+        "supplier_iban": "editable"
+      },
+      "paths": [
+        {
+          "key": "submit",
+          "label": "Trimite la viza CFPP",
+          "to": "cfpp_payment",
+          "requiresSignatures": [
+            "payment_authorization"
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează la recepție",
+          "to": "reception",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "cfpp_payment",
+      "type": "human",
+      "name": "Viza CFPP – ordonanțare",
+      "assignment": {
+        "rule": "role_queue",
+        "role": "cfpp"
+      },
+      "paths": [
+        {
+          "key": "grant",
+          "label": "Acordă viza (plată)",
+          "to": "director_payment",
+          "requiresSignatures": [
+            "payment_authorization"
+          ],
+          "actions": [
+            {
+              "type": "register",
+              "register": "cfpp_visas",
+              "direction": "internal",
+              "subject": "Viză CFPP – ordonanțare"
+            }
+          ]
+        },
+        {
+          "key": "refuse",
+          "label": "Refuză viza",
+          "to": "authorization",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "director_payment",
+      "type": "human",
+      "name": "Aprobare plată (ordonator de credite)",
+      "assignment": {
+        "rule": "role_queue",
+        "role": "director"
+      },
+      "paths": [
+        {
+          "key": "approve",
+          "label": "Aprobă plata",
+          "to": "payment",
+          "requiresSignatures": [
+            "payment_authorization"
+          ],
+          "actions": [
+            {
+              "type": "register",
+              "register": "payments",
+              "direction": "internal",
+              "document": "payment_authorization"
+            }
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează",
+          "to": "cfpp_payment",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "payment",
+      "type": "human",
+      "name": "Plată",
+      "assignment": {
+        "rule": "previous_actor",
+        "step": "authorization"
+      },
+      "fieldAccess": {
+        "payment_order_no": "required",
+        "payment_date": "required"
+      },
+      "paths": [
+        {
+          "key": "paid",
+          "label": "Plată efectuată",
+          "to": "done"
+        }
+      ]
+    },
+    {
+      "key": "done",
+      "type": "end_positive",
+      "name": "Plătit"
+    },
+    {
+      "key": "rejected",
+      "type": "end_negative",
+      "name": "Respins"
+    },
+    {
+      "key": "cancelled",
+      "type": "end_negative",
+      "name": "Anulat"
+    }
+  ]
+}

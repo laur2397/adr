@@ -144,6 +144,21 @@
           "type": "text"
         },
         {
+          "key": "supplier_cui",
+          "label": "CUI furnizor",
+          "type": "text"
+        },
+        {
+          "key": "invoice_no",
+          "label": "Nr. factură",
+          "type": "text"
+        },
+        {
+          "key": "invoice_date",
+          "label": "Data facturii",
+          "type": "date"
+        },
+        {
           "key": "requested",
           "label": "Sumă solicitată",
           "type": "amount",
@@ -607,6 +622,14 @@
           "to": "director_approval",
           "requiresSignatures": [
             "verification_note"
+          ],
+          "actions": [
+            {
+              "type": "register",
+              "register": "cfpp_visas",
+              "direction": "internal",
+              "subject": "Viză CFPP – cerere de plată"
+            }
           ]
         },
         {
@@ -703,5 +726,21 @@
       "type": "end_negative",
       "name": "Anulat"
     }
-  ]
+  ],
+  "invoiceCheck": {
+    "list": "expenses",
+    "supplier": "supplier_cui",
+    "number": "invoice_no",
+    "date": "invoice_date",
+    "amount": "requested"
+  },
+  "conflictOfInterest": {
+    "steps": [
+      "evf_check",
+      "ei_check",
+      "head_review",
+      "cfpp",
+      "director_approval"
+    ]
+  }
 }

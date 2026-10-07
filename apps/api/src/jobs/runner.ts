@@ -1,4 +1,6 @@
+import { createHmac } from 'node:crypto';
 import nodemailer from 'nodemailer';
+import { decrypt } from '../auth/crypto.js';
 import { config } from '../core/config.js';
 import { getPool, maybeOne, query, tx } from '../core/db.js';
 import { scanDeadlines } from '../deadlines/service.js';
@@ -55,6 +57,20 @@ async function run(job: Job): Promise<string> {
         if (v) attachments.push({ filename: v.file_name, content: (await readVersion(pool, v.id)).content });
       }
       return sendMail(recipient?.email ? [recipient.email] : [], inst.title, `Vă transmitem atașat documentele privind: ${inst.title}.`, attachments);
+    }
+    case 'webhook': {
+      const hook = await maybeOne(pool, `select url, secret_enc, active from webhook where id = $1`, [job.payload.webhookId]);
+      if (!hook || !hook.active) return 'skipped (webhook inactive)';
+      const body = JSON.stringify({ event: job.payload.event, occurredAt: job.payload.occurredAt, entityType: job.payload.entityType, entityId: job.payload.entityId, data: job.payload.data });
+      const signature = createHmac('sha256', decrypt(hook.secret_enc)).update(body).digest('hex');
+      const res = await fetch(hook.url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-flux-event': job.payload.event, 'x-flux-signature': `sha256=${signature}`, 'x-flux-delivery': String(job.id) },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return 'generated';
     }
     case 'call_rest': {
       const res = await fetch(job.payload.url, { method: job.payload.method ?? 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ instanceId: job.payload.instanceId }) });

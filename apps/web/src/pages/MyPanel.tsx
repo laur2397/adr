@@ -91,6 +91,10 @@ export function MyPanel() {
     mutationFn: (id: string) => api.post(`/tasks/${id}/claim`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
   });
+  const batch = useMutation({
+    mutationFn: () => api.post('/signatures/batch', { items: (toSign.data?.items ?? []).map((d: any) => ({ instanceId: d.instanceId, docKey: d.docKey })) }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
   const markRead = useMutation({ mutationFn: () => api.post('/notifications/read'), onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }) });
 
   const mine = (tasks.data?.items ?? []).filter((t) => !t.inQueue);
@@ -140,7 +144,25 @@ export function MyPanel() {
           )}
         </div>
         <div className="stack">
-          <Card title="Documente de semnat" flush>
+          <Card
+            title="Documente de semnat"
+            actions={
+              (toSign.data?.items.length ?? 0) > 1 && (
+                <button className="primary small" disabled={batch.isPending} onClick={() => batch.mutate()}>
+                  {batch.isPending ? 'Se semnează…' : `Semnează toate (${toSign.data.items.length})`}
+                </button>
+              )
+            }
+            flush
+          >
+            {batch.data && (
+              <div className={`alert ${batch.data.signed === batch.data.results.length ? 'success' : 'warning'} small`} style={{ margin: 8 }}>
+                Semnate: {batch.data.signed} din {batch.data.results.length}.
+                {batch.data.results.filter((r: any) => !r.ok).map((r: any, i: number) => (
+                  <div key={i}>{r.error}</div>
+                ))}
+              </div>
+            )}
             {toSign.data?.items.length ? (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {toSign.data.items.map((d: any) => (

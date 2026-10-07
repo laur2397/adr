@@ -211,7 +211,7 @@ export async function referenceRoutes(app: FastifyInstance) {
     return {
       items: await query(
         getPool(),
-        `select u.id, u.full_name, u.job_title, d.name as department,
+        `select u.id, u.username, u.full_name, u.job_title, d.name as department,
                 coalesce((select array_agg(distinct r.key) from role_assignment ra join role r on r.id = ra.role_id
                            where ra.user_id = u.id and ra.valid_from <= current_date and (ra.valid_to is null or ra.valid_to >= current_date)), '{}') as roles
            from app_user u left join department d on d.id = u.department_id where u.organization_id = $1 and u.active order by u.full_name`,

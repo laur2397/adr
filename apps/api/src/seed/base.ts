@@ -20,6 +20,8 @@ export const ROLES: Array<[string, string]> = [
   ['director', 'Director'],
   ['cfpp', 'Control financiar preventiv (CFPP)'],
   ['legal_advisor', 'Consilier juridic'],
+  ['irregularity_officer', 'Ofițer nereguli'],
+  ['accountant', 'Contabil'],
   ['functional_admin', 'Administrator funcțional'],
   ['it_admin', 'Administrator IT'],
   ['auditor', 'Auditor / cititor'],
@@ -36,6 +38,9 @@ export const DEADLINES = [
   { key: 'procurement_check_internal', name: 'Țintă internă: verificare achiziție', day_type: 'working', days: 15, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: null, warn_before_days: 2, legal_reference: 'Țintă internă (configurabilă)' },
   { key: 'petition_og27', name: 'Răspuns la petiție', day_type: 'calendar', days: 30, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: 15, warn_before_days: 5, legal_reference: 'OG 27/2002 art. 8-9' },
   { key: 'foia_544', name: 'Răspuns la cerere de informații publice', day_type: 'calendar', days: 10, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: 20, warn_before_days: 2, legal_reference: 'Legea 544/2001 art. 7' },
+  { key: 'irregularity_finding', name: 'Constatarea neregulii', day_type: 'working', days: 30, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: null, warn_before_days: 5, legal_reference: 'OUG 66/2011 și normele de aplicare (de verificat termenul aplicabil)' },
+  { key: 'addendum_analysis', name: 'Analiza solicitării de modificare a contractului', day_type: 'working', days: 15, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: 3, max_paused_days: null, extension_days: null, warn_before_days: 3, legal_reference: 'Țintă internă / manualul de implementare' },
+  { key: 'invoice_payment', name: 'Plata facturii', day_type: 'calendar', days: 30, start_point: 'step_entry', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: null, warn_before_days: 5, legal_reference: 'Legea 72/2013 (termen de plată pentru autorități contractante)' },
   { key: 'correspondence_general', name: 'Răspuns la corespondență', day_type: 'calendar', days: 30, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: null, warn_before_days: 5, legal_reference: 'Regulă internă' },
 ];
 
@@ -50,6 +55,9 @@ export const REGISTERS: Array<[string, string]> = [
   ['debtors', 'Registrul debitorilor'],
   ['guarantees', 'Registrul garanțiilor'],
   ['conflict_of_interest', 'Registrul conflictelor de interese'],
+  ['necessity_reports', 'Registrul referatelor de necesitate'],
+  ['payments', 'Registrul ordonanțărilor de plată'],
+  ['cfpp_visas', 'Registrul vizelor de control financiar preventiv'],
 ];
 
 export const NOMENCLATURES: Record<string, { name: string; items: Array<[string, string]> }> = {
@@ -59,6 +67,25 @@ export const NOMENCLATURES: Record<string, { name: string; items: Array<[string,
     items: [['achizitie_directa', 'Achiziție directă'], ['procedura_simplificata', 'Procedură simplificată'], ['licitatie_deschisa', 'Licitație deschisă'], ['negociere', 'Negociere fără publicare'], ['procedura_proprie', 'Procedură proprie (beneficiar privat)']],
   },
   procurement_verdict: { name: 'Aviz achiziție', items: [['aviz_favorabil', 'Aviz favorabil'], ['aviz_cu_corectie', 'Aviz cu corecție financiară'], ['aviz_nefavorabil', 'Aviz nefavorabil']] },
+  irregularity_source: {
+    name: 'Sursa suspiciunii de neregulă',
+    items: [['verificare_cerere', 'Verificarea unei cereri de rambursare / plată'], ['verificare_achizitie', 'Verificarea unei achiziții'], ['vizita', 'Vizită la fața locului'], ['audit', 'Misiune de audit (AA, CE, Curtea de Conturi)'], ['sesizare', 'Sesizare externă'], ['dna_olaf', 'DNA / OLAF / organe de cercetare']],
+  },
+  irregularity_type: {
+    name: 'Tipul neregulii',
+    items: [['achizitii', 'Nereguli în achiziții'], ['cheltuieli_neeligibile', 'Cheltuieli neeligibile'], ['dubla_finantare', 'Dublă finanțare'], ['conflict_interese', 'Conflict de interese'], ['indicatori', 'Nerealizarea indicatorilor'], ['frauda_suspectata', 'Suspiciune de fraudă']],
+  },
+  irregularity_outcome: { name: 'Rezultatul verificării', items: [['confirmata', 'Neregulă confirmată'], ['neconfirmata', 'Neregulă neconfirmată']] },
+  addendum_kind: { name: 'Tip modificare contract', items: [['act_aditional', 'Act adițional'], ['notificare', 'Notificare']] },
+  addendum_decision: { name: 'Propunere', items: [['aprobare', 'Aprobare'], ['respingere', 'Respingere']] },
+  funding_source: {
+    name: 'Sursa de finanțare',
+    items: [['asistenta_tehnica', 'Asistență tehnică PR (FEDR + buget de stat)'], ['buget_stat', 'Buget de stat'], ['venituri_proprii', 'Venituri proprii']],
+  },
+  decision_type: {
+    name: 'Tipul deciziei',
+    items: [['comisie', 'Numire comisie / echipă'], ['procedura', 'Aprobare procedură / regulament'], ['delegare', 'Delegare de atribuții'], ['personal', 'Resurse umane'], ['altele', 'Altele']],
+  },
   correspondence_category: {
     name: 'Categorie corespondență',
     items: [['corespondenta', 'Corespondență generală'], ['petitie', 'Petiție (OG 27/2002)'], ['informatii_544', 'Informații publice (Legea 544/2001)']],

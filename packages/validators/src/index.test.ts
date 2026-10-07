@@ -6,6 +6,7 @@ import {
   checkSmisCode,
   compareAmounts,
   formatAmount,
+  multiplyAmount,
   formatDate,
   parseAmount,
   parseDate,
@@ -59,5 +60,14 @@ describe('dates', () => {
   it('formats and parses dd.mm.yyyy', () => {
     expect(formatDate('2026-10-07')).toBe('07.10.2026');
     expect(parseDate('7.10.2026')).toBe('2026-10-07');
+  });
+});
+
+describe('multiplyAmount', () => {
+  it('multiplies exactly and rounds to the ban', () => {
+    expect(multiplyAmount('100.00', 3)).toBe('300.00');
+    expect(multiplyAmount('1234.56', '0.19')).toBe('234.57');
+    expect(multiplyAmount('0.05', '0.5')).toBe('0.03');
+    expect(multiplyAmount('10.00', '0.21')).toBe('2.10');
   });
 });

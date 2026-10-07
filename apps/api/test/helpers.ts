@@ -46,8 +46,25 @@ export class Client {
     return this;
   }
 
+  /** When true, a 422 coi_required is answered with a "no conflict" declaration and the call is retried. */
+  autoCoi = true;
+
   async req(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, payload?: unknown): Promise<LightMyRequestResponse> {
-    return this.app.inject({ method, url: `/api/v1${url}`, payload: payload as never, headers: { cookie: this.cookie, 'x-flux-csrf': '1' } });
+    const send = () => this.app.inject({ method, url: `/api/v1${url}`, payload: payload as never, headers: { cookie: this.cookie, 'x-flux-csrf': '1' } });
+    const res = await send();
+    const m = /^\/(?:instances\/([0-9a-f-]{36}))/.exec(url);
+    if (this.autoCoi && res.statusCode === 422 && res.json().code === 'coi_required') {
+      let instanceId = m?.[1];
+      if (!instanceId && url.startsWith('/tasks/')) {
+        const tasks = await this.app.inject({ method: 'GET', url: '/api/v1/tasks', headers: { cookie: this.cookie } });
+        instanceId = tasks.json().items.find((t: { id: string }) => url.includes(t.id))?.instance_id;
+      }
+      if (instanceId) {
+        await this.app.inject({ method: 'POST', url: `/api/v1/instances/${instanceId}/coi`, payload: { hasConflict: false }, headers: { cookie: this.cookie, 'x-flux-csrf': '1' } });
+        return send();
+      }
+    }
+    return res;
   }
 
   async ok<T = any>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, payload?: unknown): Promise<T> {

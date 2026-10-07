@@ -1,0 +1,396 @@
+{
+  "schemaVersion": 1,
+  "key": "p4_irregularities",
+  "name": "Nereguli și debitori",
+  "description": "Pachetul P4: suspiciune de neregulă, constatare (proces-verbal), avizare, titlu de creanță și înscriere în registrul debitorilor. Termenele (OUG 66/2011) sunt de validat juridic.",
+  "subject": {
+    "requires": [
+      "project",
+      "beneficiary"
+    ]
+  },
+  "fields": [
+    {
+      "key": "source",
+      "label": "Sursa suspiciunii",
+      "type": "choice",
+      "nomenclature": "irregularity_source"
+    },
+    {
+      "key": "suspicion",
+      "label": "Descrierea suspiciunii",
+      "type": "textarea"
+    },
+    {
+      "key": "smis_code",
+      "label": "Cod SMIS",
+      "type": "text",
+      "prefill": {
+        "from": "project",
+        "path": "smis_code"
+      }
+    },
+    {
+      "key": "beneficiary_name",
+      "label": "Beneficiar",
+      "type": "text",
+      "prefill": {
+        "from": "beneficiary",
+        "path": "name"
+      }
+    },
+    {
+      "key": "affected_amount",
+      "label": "Valoarea estimată afectată",
+      "type": "amount"
+    },
+    {
+      "key": "irregularity_type",
+      "label": "Tipul neregulii",
+      "type": "choice",
+      "nomenclature": "irregularity_type"
+    },
+    {
+      "key": "finding",
+      "label": "Constatări",
+      "type": "textarea"
+    },
+    {
+      "key": "legal_basis",
+      "label": "Temei legal",
+      "type": "text"
+    },
+    {
+      "key": "debt_principal",
+      "label": "Creanță bugetară (debit)",
+      "type": "amount",
+      "min": 0
+    },
+    {
+      "key": "debt_due_date",
+      "label": "Scadența titlului de creanță",
+      "type": "date"
+    },
+    {
+      "key": "ims_report",
+      "label": "Se raportează în IMS (OLAF)",
+      "type": "boolean",
+      "prefill": {
+        "from": "constant",
+        "value": false
+      }
+    },
+    {
+      "key": "outcome",
+      "label": "Rezultat",
+      "type": "choice",
+      "nomenclature": "irregularity_outcome"
+    },
+    {
+      "key": "debt_title_number",
+      "label": "Număr titlu de creanță",
+      "type": "text"
+    }
+  ],
+  "documents": [
+    {
+      "key": "finding_report",
+      "template": "p4_finding_report",
+      "docType": "irregularity_finding_report",
+      "signatureLevel": "qualified"
+    },
+    {
+      "key": "debt_title",
+      "template": "p4_debt_title",
+      "docType": "debt_title",
+      "signatureLevel": "qualified"
+    }
+  ],
+  "deadlines": [
+    {
+      "key": "finding",
+      "definition": "irregularity_finding",
+      "stopsAt": [
+        "director_approval"
+      ]
+    }
+  ],
+  "separationOfDuties": [
+    {
+      "steps": [
+        "assessment",
+        "head_review"
+      ],
+      "message": "Cel care a întocmit procesul-verbal nu îl poate aviza."
+    }
+  ],
+  "steps": [
+    {
+      "key": "registration",
+      "type": "start",
+      "name": "Sesizare",
+      "fieldAccess": {
+        "source": "required",
+        "suspicion": "required",
+        "affected_amount": "editable",
+        "irregularity_type": "hidden",
+        "finding": "hidden",
+        "legal_basis": "hidden",
+        "debt_principal": "hidden",
+        "debt_due_date": "hidden",
+        "ims_report": "hidden",
+        "outcome": "hidden",
+        "debt_title_number": "hidden"
+      },
+      "paths": [
+        {
+          "key": "register",
+          "label": "Înregistrează sesizarea",
+          "to": "assessment",
+          "actions": [
+            {
+              "type": "register",
+              "register": "irregularities",
+              "direction": "internal"
+            }
+          ]
+        },
+        {
+          "key": "cancel",
+          "label": "Anulează",
+          "to": "cancelled",
+          "kind": "reject",
+          "requiresComment": true
+        }
+      ],
+      "assignment": {
+        "rule": "role_queue",
+        "role": "irregularity_officer"
+      }
+    },
+    {
+      "key": "assessment",
+      "type": "human",
+      "name": "Verificare și constatare",
+      "assignment": {
+        "rule": "least_loaded",
+        "role": "irregularity_officer"
+      },
+      "deadline": "finding",
+      "fieldAccess": {
+        "irregularity_type": "editable",
+        "finding": "required",
+        "legal_basis": "editable",
+        "debt_principal": "editable",
+        "debt_due_date": "editable",
+        "ims_report": "editable",
+        "outcome": "required",
+        "affected_amount": "editable",
+        "debt_title_number": "hidden"
+      },
+      "paths": [
+        {
+          "key": "no_irregularity",
+          "label": "Nu se confirmă neregula",
+          "to": "head_review",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.outcome"
+              },
+              "neconfirmata"
+            ]
+          },
+          "requiresSignatures": [
+            "finding_report"
+          ]
+        },
+        {
+          "key": "irregularity",
+          "label": "Neregulă constatată – trimite la avizare",
+          "to": "head_review",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.outcome"
+              },
+              "confirmata"
+            ]
+          },
+          "requiresSignatures": [
+            "finding_report"
+          ],
+          "validations": [
+            {
+              "rule": {
+                "amount_gte": [
+                  {
+                    "var": "fields.debt_principal"
+                  },
+                  "0.01"
+                ]
+              },
+              "message": "Completați creanța bugetară stabilită."
+            },
+            {
+              "rule": {
+                "!!": {
+                  "var": "fields.debt_due_date"
+                }
+              },
+              "message": "Completați scadența titlului de creanță."
+            },
+            {
+              "rule": {
+                "!!": {
+                  "var": "fields.irregularity_type"
+                }
+              },
+              "message": "Alegeți tipul neregulii."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "head_review",
+      "type": "human",
+      "name": "Avizare șef serviciu",
+      "assignment": {
+        "rule": "department_head",
+        "step": "assessment"
+      },
+      "paths": [
+        {
+          "key": "endorse",
+          "label": "Avizează",
+          "to": "director_approval",
+          "requiresSignatures": [
+            "finding_report"
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează",
+          "to": "assessment",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "director_approval",
+      "type": "human",
+      "name": "Aprobare director",
+      "assignment": {
+        "rule": "role_queue",
+        "role": "director"
+      },
+      "onEnter": [
+        {
+          "type": "generate_document",
+          "document": "debt_title",
+          "when": {
+            "==": [
+              {
+                "var": "fields.outcome"
+              },
+              "confirmata"
+            ]
+          }
+        }
+      ],
+      "paths": [
+        {
+          "key": "approve_debt",
+          "label": "Aprobă și emite titlul de creanță",
+          "to": "issue_debt",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.outcome"
+              },
+              "confirmata"
+            ]
+          },
+          "requiresSignatures": [
+            "finding_report",
+            "debt_title"
+          ]
+        },
+        {
+          "key": "approve_close",
+          "label": "Aprobă clasarea",
+          "to": "closed_no_irregularity",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.outcome"
+              },
+              "neconfirmata"
+            ]
+          },
+          "requiresSignatures": [
+            "finding_report"
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează",
+          "to": "head_review",
+          "kind": "return"
+        }
+      ]
+    },
+    {
+      "key": "issue_debt",
+      "type": "system",
+      "name": "Titlu de creanță și registrul debitorilor",
+      "onEnter": [
+        {
+          "type": "create_debt",
+          "principal": "debt_principal",
+          "dueDate": "debt_due_date",
+          "reason": "finding"
+        },
+        {
+          "type": "register",
+          "register": "general",
+          "direction": "out",
+          "document": "debt_title"
+        },
+        {
+          "type": "notify",
+          "to": "beneficiary_email",
+          "template": "p4_debt_title_email",
+          "attach": [
+            "finding_report",
+            "debt_title"
+          ]
+        }
+      ],
+      "next": "done"
+    },
+    {
+      "key": "done",
+      "type": "end_positive",
+      "name": "Titlu emis"
+    },
+    {
+      "key": "closed_no_irregularity",
+      "type": "end_positive",
+      "name": "Clasat (neregulă neconfirmată)"
+    },
+    {
+      "key": "cancelled",
+      "type": "end_negative",
+      "name": "Anulat"
+    }
+  ],
+  "conflictOfInterest": {
+    "steps": [
+      "assessment",
+      "head_review",
+      "director_approval"
+    ]
+  }
+}

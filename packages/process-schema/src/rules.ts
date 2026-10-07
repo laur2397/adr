@@ -1,5 +1,5 @@
 import jsonLogic from 'json-logic-js';
-import { addAmounts, compareAmounts, parseAmount, subtractAmounts } from '@flux/validators';
+import { addAmounts, compareAmounts, multiplyAmount, parseAmount, subtractAmounts } from '@flux/validators';
 import type { JsonLogic } from './types.js';
 
 // Amount operators: JSONLogic's own + and - work on floats; money must not.
@@ -10,6 +10,12 @@ const amt = (v: unknown): string => {
 };
 
 jsonLogic.add_operation('amount_add', (...xs: unknown[]) => addAmounts(...xs.map(amt)));
+/** amount_mul: [amount, factor] -> amount × factor (quantity or rate), exact to the ban. */
+jsonLogic.add_operation('amount_mul', (a: unknown, f: unknown) => {
+  const n = Number(typeof f === 'number' ? f : String(f ?? '0').replace(',', '.'));
+  if (!Number.isFinite(n)) throw new Error('not a number');
+  return multiplyAmount(amt(a), n.toFixed(6));
+});
 jsonLogic.add_operation('amount_sub', (a: unknown, b: unknown) => subtractAmounts(amt(a), amt(b)));
 jsonLogic.add_operation('amount_lte', (a: unknown, b: unknown) => compareAmounts(amt(a), amt(b)) <= 0);
 jsonLogic.add_operation('amount_lt', (a: unknown, b: unknown) => compareAmounts(amt(a), amt(b)) < 0);

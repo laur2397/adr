@@ -1,5 +1,6 @@
 import { computeCalculated, type FieldValues, type ProcessDefinition, type RuleContext } from '@flux/process-schema';
 import { query, type Db } from '../core/db.js';
+import { reindexInstance } from '../search/index.js';
 
 export interface FieldMeta {
   source: string;
@@ -73,5 +74,6 @@ export async function refreshCalculated(db: Db, def: ProcessDefinition, instance
       }
     }
   }
+  await reindexInstance(db, instanceId);
   return computed;
 }

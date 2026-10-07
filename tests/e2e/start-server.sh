@@ -11,6 +11,6 @@ admin_url="${DATABASE_URL%/*}/postgres"
 psql "$admin_url" -qc "drop database if exists $db" -c "create database $db"
 rm -rf "$STORAGE_DIR"
 [ -f apps/web/dist/index.html ] || pnpm --filter @flux/web build
-SEED_DEMO=true ADMIN_PASSWORD=Parola-e2e-2026 pnpm --filter @flux/api seed >/dev/null
+SEED_DEMO=true SEED_SIMULATE=false ADMIN_PASSWORD=Parola-e2e-2026 pnpm --filter @flux/api seed >/dev/null
 pnpm --filter @flux/api start:worker &
 exec pnpm --filter @flux/api start

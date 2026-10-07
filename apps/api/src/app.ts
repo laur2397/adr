@@ -18,6 +18,14 @@ import { registryRoutes } from './registry/routes.js';
 import { reportingRoutes } from './reporting/routes.js';
 import { signingRoutes } from './signing/routes.js';
 import { workflowRoutes } from './workflow/routes.js';
+import { collaborationRoutes } from './collaboration/routes.js';
+import { debtRoutes } from './debts/routes.js';
+import { searchRoutes } from './search/routes.js';
+import { controlRoutes } from './controls/routes.js';
+import { archiveRoutes } from './archive/routes.js';
+import { integrationRoutes } from './integrations/hooks/routes.js';
+import { mailRoutes } from './integrations/mail/routes.js';
+import { resolveApiToken } from './integrations/hooks/token.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -55,6 +63,17 @@ export async function buildApp(opts: { logger?: boolean } = {}): Promise<Fastify
   app.addHook('onRequest', async (req) => {
     const path = req.url.split('?')[0]!;
     if (!path.startsWith('/api/v1/')) return;
+    // API tokens (integrations): Authorization: Bearer flx_… acts as the token's user; no cookies, so no CSRF risk.
+    const bearer = /^Bearer (flx_[A-Za-z0-9_-]+)$/.exec(req.headers.authorization ?? '')?.[1];
+    if (bearer) {
+      const userId = await resolveApiToken(getPool(), bearer);
+      const user = userId ? await loadUserCached(getPool(), userId) : null;
+      if (!user) throw new AppError(401, 'Token API invalid, expirat sau revocat.');
+      user.ip = req.ip;
+      user.userAgent = req.headers['user-agent'] ?? null;
+      req.currentUser = user;
+      return;
+    }
     // CSRF: browsers cannot send a custom header cross-site without a CORS preflight, which we never allow.
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !path.startsWith('/api/v1/signatures/callback/') && req.headers['x-flux-csrf'] !== '1') {
       throw new AppError(403, 'Cerere respinsă: lipsește antetul X-Flux-Csrf.');
@@ -112,6 +131,13 @@ export async function buildApp(opts: { logger?: boolean } = {}): Promise<Fastify
   await app.register(documentRoutes, { prefix: '/api/v1' });
   await app.register(signingRoutes, { prefix: '/api/v1' });
   await app.register(reportingRoutes, { prefix: '/api/v1' });
+  await app.register(collaborationRoutes, { prefix: '/api/v1' });
+  await app.register(debtRoutes, { prefix: '/api/v1' });
+  await app.register(searchRoutes, { prefix: '/api/v1' });
+  await app.register(controlRoutes, { prefix: '/api/v1' });
+  await app.register(archiveRoutes, { prefix: '/api/v1' });
+  await app.register(integrationRoutes, { prefix: '/api/v1' });
+  await app.register(mailRoutes, { prefix: '/api/v1' });
 
   // Production: the API also serves the built web app (WEB_DIST), with client-side routing fallback.
   const webDist = process.env.WEB_DIST;

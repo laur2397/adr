@@ -28,6 +28,13 @@ async function openFromPanel(page: Page, title: RegExp) {
   await page.goto('/');
   await page.getByRole('link', { name: title }).first().click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('SMIS 302145');
+  // Steps under conflict-of-interest control ask for the declaration before any work.
+  const declare = page.getByRole('button', { name: 'Completează declarația' });
+  if (await declare.isVisible()) {
+    await declare.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Semnez declarația' }).click();
+    await expect(declare).toBeHidden();
+  }
 }
 
 test('P1 dossier from registration to approval', async ({ browser }) => {

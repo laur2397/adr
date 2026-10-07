@@ -17,6 +17,8 @@ const DEPARTMENTS: Array<[string, string]> = [
   ['SVA', 'Serviciul Verificare Achiziții'],
   ['CFPP', 'Control Financiar Preventiv'],
   ['CON', 'Conducere'],
+  ['SN', 'Serviciul Nereguli'],
+  ['FC', 'Serviciul Financiar-Contabil'],
 ];
 
 // username, full name, job title, department, roles, head of department
@@ -33,6 +35,10 @@ const USERS: Array<[string, string, string, string, string[], boolean]> = [
   ['director', 'Gabriela Vasile', 'Director', 'CON', ['director'], true],
   ['juridic', 'Ana Nistor', 'Consilier juridic', 'CON', ['legal_advisor'], false],
   ['auditor', 'Victor Matei', 'Auditor intern', 'CON', ['auditor'], false],
+  ['nereguli', 'Bogdan Rusu', 'Ofițer nereguli', 'SN', ['irregularity_officer'], false],
+  ['sef.sn', 'Irina Toma', 'Șef Serviciul Nereguli', 'SN', ['head_of_unit'], true],
+  ['contabil', 'Monica Dinu', 'Contabil', 'FC', ['accountant'], false],
+  ['sef.fc', 'Paul Neagu', 'Șef Serviciul Financiar-Contabil', 'FC', ['head_of_unit'], true],
 ];
 
 const PROJECTS = [
@@ -50,6 +56,36 @@ const PROJECTS = [
     smis: '303402', title: 'Digitalizarea serviciilor TEST DIGITAL SRL', beneficiary: 'TEST DIGITAL SRL', cuiBody: '4012356', county: 'HUNEDOARA',
     contract: 'C-2026/031', contractDate: '2026-02-11', total: '980000.00', eligible: '850000.00', nonReimbursable: '595000.00', expert: 'evf1',
     lines: [['1.1', 'Echipamente IT', '420000.00'], ['1.2', 'Licențe software', '310000.00'], ['2.1', 'Instruire', '70000.00'], ['3.1', 'Publicitate', '50000.00']],
+  },
+  {
+    smis: '304118', title: 'Extinderea rețelei de apă în comuna Exemplu Nouă', beneficiary: 'COMUNA EXEMPLU NOUA', cuiBody: '451879', county: 'TIMIȘ',
+    contract: 'C-2025/233', contractDate: '2025-07-14', total: '9850000.00', eligible: '9400000.00', nonReimbursable: '9212000.00', expert: 'evf2',
+    lines: [['1.1', 'Lucrări de construcții', '8200000.00'], ['1.2', 'Asistență tehnică', '420000.00'], ['2.1', 'Proiectare', '610000.00'], ['3.1', 'Publicitate', '170000.00']],
+  },
+  {
+    smis: '304760', title: 'Centru de inovare și transfer tehnologic VEST TECH', beneficiary: 'VEST TECH INOVARE SRL', cuiBody: '4378129', county: 'TIMIȘ',
+    contract: 'C-2025/301', contractDate: '2025-09-05', total: '3200000.00', eligible: '2950000.00', nonReimbursable: '2065000.00', expert: 'evf1',
+    lines: [['1.1', 'Echipamente de laborator', '2100000.00'], ['1.2', 'Software de simulare', '480000.00'], ['2.1', 'Consultanță', '250000.00'], ['3.1', 'Publicitate', '120000.00']],
+  },
+  {
+    smis: '305012', title: 'Reabilitarea Muzeului Județean – corp B', beneficiary: 'JUDETUL EXEMPLU', cuiBody: '459861', county: 'HUNEDOARA',
+    contract: 'C-2025/344', contractDate: '2025-10-20', total: '12400000.00', eligible: '11800000.00', nonReimbursable: '11564000.00', expert: 'evf2',
+    lines: [['1.1', 'Lucrări de restaurare', '10300000.00'], ['1.2', 'Dirigenție de șantier', '520000.00'], ['2.1', 'Proiectare', '780000.00'], ['3.1', 'Publicitate', '200000.00']],
+  },
+  {
+    smis: '305477', title: 'Linie de producție componente auto – PRECIZIA SA', beneficiary: 'PRECIZIA COMPONENTE SA', cuiBody: '1876543', county: 'ARAD',
+    contract: 'C-2026/012', contractDate: '2026-01-22', total: '5600000.00', eligible: '4900000.00', nonReimbursable: '2450000.00', expert: 'evf1',
+    lines: [['1.1', 'Utilaje CNC', '4100000.00'], ['1.2', 'Instalații', '500000.00'], ['3.1', 'Publicitate', '300000.00']],
+  },
+  {
+    smis: '306230', title: 'Reconversia profesională a minerilor din Valea Jiului', beneficiary: 'ASOCIATIA EXEMPLU PENTRU CALIFICARE', cuiBody: '3998761', county: 'HUNEDOARA',
+    contract: 'C-PTJ-2026/004', contractDate: '2026-02-03', total: '1450000.00', eligible: '1450000.00', nonReimbursable: '1450000.00', expert: 'evf2', program: 'PTJ',
+    lines: [['1.1', 'Cursuri de formare', '980000.00'], ['1.2', 'Subvenții cursanți', '360000.00'], ['2.1', 'Management proiect', '110000.00']],
+  },
+  {
+    smis: '306911', title: 'Parc fotovoltaic pentru autoconsum – EXEMPLU ENERGIE', beneficiary: 'EXEMPLU ENERGIE VERDE SRL', cuiBody: '4560321', county: 'CARAȘ-SEVERIN',
+    contract: 'C-PTJ-2026/019', contractDate: '2026-03-17', total: '2750000.00', eligible: '2500000.00', nonReimbursable: '1500000.00', expert: 'evf1', program: 'PTJ',
+    lines: [['1.1', 'Panouri și invertoare', '1900000.00'], ['1.2', 'Montaj', '450000.00'], ['3.1', 'Publicitate', '150000.00']],
   },
 ];
 
@@ -112,7 +148,7 @@ export async function seedDemo(db: Db, orgId: string, password: string, log: (m:
                             non_reimbursable_value, start_date, end_date, responsible_expert_id, source, source_at)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $7, '2027-12-31', $11, 'import', now())
        on conflict (organization_id, smis_code) do update set title = excluded.title returning id`,
-      [orgId, p.smis, p.title, b.id, programs.PR, p.contract, p.contractDate, p.total, p.eligible, p.nonReimbursable, userIds[p.expert]],
+      [orgId, p.smis, p.title, b.id, programs[(p as { program?: string }).program ?? 'PR'], p.contract, p.contractDate, p.total, p.eligible, p.nonReimbursable, userIds[p.expert]],
     );
     for (const [code, category, amount] of p.lines) {
       await query(
@@ -124,8 +160,12 @@ export async function seedDemo(db: Db, orgId: string, password: string, log: (m:
   }
   for (const [indicative, title, years] of [
     ['I-1', 'Corespondență generală', 10],
+    ['I-2', 'Petiții și solicitări de informații publice', 5],
     ['FE-3', 'Dosare cereri de rambursare / plată', 10],
     ['FE-4', 'Dosare verificare achiziții', 10],
+    ['FE-5', 'Acte adiționale și notificări', 10],
+    ['FE-6', 'Nereguli și titluri de creanță', 10],
+    ['FC-2', 'Referate de necesitate și ordonanțări', 10],
     ['C-1', 'Decizii ale directorului', null],
   ] as Array<[string, string, number | null]>) {
     const item = await one(
@@ -135,6 +175,15 @@ export async function seedDemo(db: Db, orgId: string, password: string, log: (m:
       [orgId, indicative, title, years],
     );
     await query(db, `insert into archive_file (nomenclature_item_id, year) values ($1, extract(year from current_date)) on conflict do nothing`, [item.id]);
+    // Earlier years, already closed (the oldest ones have an expired retention period).
+    for (const back of [1, 6, 12]) {
+      await query(
+        db,
+        `insert into archive_file (nomenclature_item_id, year, closed_at) values ($1, extract(year from current_date)::int - $2, make_date(extract(year from current_date)::int - $2 + 1, 1, 15))
+         on conflict do nothing`,
+        [item.id, back],
+      );
+    }
   }
   log(`demo data: ${USERS.length} users, ${PROJECTS.length} projects`);
   return userIds;

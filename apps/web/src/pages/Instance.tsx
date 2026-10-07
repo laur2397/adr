@@ -4,11 +4,13 @@ import { Link, useParams } from 'react-router';
 import { api, ApiError, can } from '../api';
 import { FieldInput, type FieldView } from '../components/fields';
 import { AuditPanel, ChecklistPanel, DeadlinesPanel, DocumentsPanel, HistoryPanel, RegistrationsPanel } from '../components/InstancePanels';
+import { CoiBanner, CommentsPanel, DoubleFundingAlerts } from '../components/Collaboration';
+import { ProcessDiagram } from '../components/ProcessDiagram';
 import { LineItems } from '../components/LineItems';
 import { Card, ErrorAlert, Loading, Modal, StatusBadge, useMe } from '../components/ui';
 import { fmtAmount, fmtDate, fmtDateTime } from '../format';
 
-type Tab = 'form' | 'checklist' | 'documents' | 'deadlines' | 'history' | 'registers' | 'audit';
+type Tab = 'form' | 'checklist' | 'documents' | 'comments' | 'flow' | 'deadlines' | 'history' | 'registers' | 'audit';
 
 function Circuit({ steps }: { steps: any[] }) {
   return (
@@ -216,6 +218,8 @@ export function InstancePage() {
     ['form', 'Formular', true],
     ['checklist', 'Listă de verificare', instance.checklists.length > 0],
     ['documents', `Documente (${instance.documents.length})`, true],
+    ['comments', 'Comentarii', true],
+    ['flow', 'Flux', true],
     ['deadlines', 'Termene', true],
     ['history', 'Istoric', true],
     ['registers', 'Înregistrări', true],
@@ -253,6 +257,23 @@ export function InstancePage() {
       <Card flush>
         <Circuit steps={instance.steps} />
       </Card>
+      {(instance.parentInstanceId || instance.children?.length > 0) && (
+        <div className="alert info small">
+          {instance.parentInstanceId && (
+            <div>
+              Dosar deschis din <Link to={`/dosare/${instance.parentInstanceId}`}>dosarul părinte</Link>.
+            </div>
+          )}
+          {instance.children?.map((c: any) => (
+            <div key={c.id}>
+              Dosar legat: <Link to={`/dosare/${c.id}`}>{c.title}</Link> ({c.definition_name}
+              {c.reference_no ? `, nr. ${c.reference_no}` : ''}) – <StatusBadge status={c.status} />
+            </div>
+          ))}
+        </div>
+      )}
+      <DoubleFundingAlerts items={instance.doubleFunding} />
+      {task && instance.status === 'active' && <CoiBanner instanceId={instance.id} coi={instance.coi} />}
       {task && instance.status === 'active' && <ActionPanel instance={instance} task={task} />}
       {!task && instance.status === 'active' && others.length > 0 && (
         <div className="alert info">
@@ -278,6 +299,13 @@ export function InstancePage() {
           </div>
         )}
         {tab === 'documents' && <DocumentsPanel instance={instance} signable={signable} canEdit={Boolean(task)} />}
+        {tab === 'comments' && <CommentsPanel instanceId={instance.id} />}
+        {tab === 'flow' && (
+          <Card title={`Fluxul procesului: ${instance.definition.name} (v${instance.definition.version})`}>
+            <p className="small muted">Verde: pași parcurși · plin: pasul curent · linie întreruptă portocalie: returnări posibile.</p>
+            <ProcessDiagram steps={instance.flow} states={Object.fromEntries(instance.steps.map((s: any) => [s.key, s.state]))} />
+          </Card>
+        )}
         {tab === 'deadlines' && <DeadlinesPanel deadlines={instance.deadlines} />}
         {tab === 'history' && <HistoryPanel history={instance.history} />}
         {tab === 'registers' && <RegistrationsPanel registrations={instance.registrations} />}

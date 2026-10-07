@@ -13,6 +13,8 @@ import { entriesForInstance } from '../registry/service.js';
 import { claimTask, reassignTask, startInstance, transition, visiblePaths } from './engine.js';
 import { loadInstance, type InstanceContext } from './load.js';
 import { actingAs, openTasks, type TaskRow } from './tasks.js';
+import { assertCoiDeclared, requiresCoi } from '../controls/coi.js';
+import { doubleFundingAlerts, indexInvoices } from '../controls/invoices.js';
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'În lucru',
@@ -26,6 +28,7 @@ async function actionableTask(user: CurrentUser, ctx: InstanceContext, taskId?: 
   const tasks = await openTasks(getPool(), ctx.instance.id);
   const task = tasks.find((t) => (!taskId || t.id === taskId) && actingAs(user, t, ctx.def.key).ok);
   if (!task) throw forbidden('Nu aveți o sarcină deschisă în acest dosar care să permită modificarea.');
+  await assertCoiDeclared(getPool(), ctx.def, task.step_key, ctx.instance.id, user.id);
   return task;
 }
 
@@ -222,6 +225,10 @@ export async function workflowRoutes(app: FastifyInstance) {
       ]),
       entriesForInstance(pool, ctx.instance.id),
     ]);
+    const [doubleFunding, coi] = await Promise.all([
+      ctx.def.invoiceCheck ? doubleFundingAlerts(pool, ctx.instance.id) : Promise.resolve([]),
+      query(pool, `select has_conflict from coi_declaration where instance_id = $1 and user_id = $2`, [ctx.instance.id, user.id]),
+    ]);
     const fields = (ctx.def.fields as FieldDef[])
       .map((f) => {
         const access = actionable ? fieldAccess(ctx.def, actionable.stepKey, f) : 'visible';
@@ -262,6 +269,28 @@ export async function workflowRoutes(app: FastifyInstance) {
       documents,
       documentTitles: Object.fromEntries(documentTitles.map((r) => [(ctx.def.documents ?? []).find((d) => d.template === r.key)?.key, r.name])),
       registrations,
+      doubleFunding,
+      parentInstanceId: ctx.instance.parent_instance_id,
+      flow: ctx.def.steps.map((st) => ({
+        key: st.key,
+        name: st.name,
+        type: st.type,
+        next: st.next,
+        branches: st.branches?.map((b) => ({ to: b.to })),
+        paths: st.paths?.map((p) => ({ key: p.key, label: p.label, to: p.to, kind: p.kind ?? 'forward' })),
+      })),
+      children: await query(
+        pool,
+        `select c.id, c.title, c.status, c.reference_no, d.name as definition_name from instance c join process_definition d on d.id = c.definition_id
+          where c.parent_instance_id = $1 order by c.started_at`,
+        [ctx.instance.id],
+      ),
+      coi: {
+        // a declaration is needed before acting on the current task (if the step requires one)
+        required: Boolean(actionable && requiresCoi(ctx.def, actionable.stepKey)),
+        declared: coi.length > 0,
+        hasConflict: coi[0]?.has_conflict ?? false,
+      },
     };
   });
 
@@ -332,6 +361,7 @@ export async function workflowRoutes(app: FastifyInstance) {
       if (errors.length) throw unprocessable('Unele rânduri nu au putut fi salvate.', errors);
       const { values } = await loadFields(db, ctx.instance.id);
       await saveList(db, ctx.instance.id, f.key, rows, user.id);
+      if (ctx.def.invoiceCheck?.list === f.key) await indexInvoices(db, ctx.def, ctx.instance, rows);
       await audit(db, actorOf(user), { action: 'instance.list.update', entityType: 'instance', entityId: ctx.instance.id, oldValue: { [f.key]: values[f.key] ?? [] }, newValue: { [f.key]: rows } });
       const computed = await refreshCalculated(db, ctx.def, ctx.instance.id, { project: ctx.project, beneficiary: ctx.beneficiary });
       return { fields: computed };

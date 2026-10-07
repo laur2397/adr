@@ -66,6 +66,12 @@ export function validateDefinition(input: unknown): { ok: true; definition: Proc
       if (typeof a.deadline === 'string' && !deadlines.has(a.deadline)) add(p, `unknown deadline "${a.deadline}"`);
       if (a.type === 'set_field' && typeof a.field === 'string' && !fields.has(a.field)) add(p, `unknown field "${a.field}"`);
       if (a.type === 'start_subflow' && typeof a.subflow !== 'string') add(p, 'start_subflow needs "subflow"');
+      for (const key of ['principal', 'dueDate', 'reason', 'accessories']) {
+        if (a.type === 'create_debt' && typeof a[key] === 'string' && !fields.has(a[key] as string)) add(p, `create_debt.${key} uses unknown field "${a[key]}"`);
+      }
+      if (a.type === 'update_project') {
+        for (const f of Object.values((a.set as Record<string, string>) ?? {})) if (!fields.has(f)) add(p, `update_project uses unknown field "${f}"`);
+      }
       checkRuleVars(a.when, p);
     });
   };
@@ -107,6 +113,14 @@ export function validateDefinition(input: unknown): { ok: true; definition: Proc
   (def.separationOfDuties ?? []).forEach((r, i) => {
     for (const k of r.steps) if (!steps.has(k)) add(`/separationOfDuties/${i}`, `unknown step "${k}"`);
   });
+  for (const k of def.conflictOfInterest?.steps ?? []) if (!steps.has(k)) add('/conflictOfInterest', `unknown step "${k}"`);
+  if (def.invoiceCheck) {
+    const list = def.fields.find((f) => f.key === def.invoiceCheck!.list && f.type === 'line_items');
+    if (!list) add('/invoiceCheck', `"${def.invoiceCheck.list}" is not a line_items field`);
+    for (const col of [def.invoiceCheck.supplier, def.invoiceCheck.number, def.invoiceCheck.date, def.invoiceCheck.amount]) {
+      if (col && list && !list.columns?.some((c) => c.key === col)) add('/invoiceCheck', `unknown column "${col}"`);
+    }
+  }
   def.fields.forEach((f, i) => {
     if (f.type === 'line_items' && !f.columns?.length) add(`/fields/${i}`, 'line_items needs columns');
     if (f.type === 'calculated' && f.formula === undefined) add(`/fields/${i}`, 'calculated field needs a formula');

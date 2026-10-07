@@ -13,6 +13,7 @@ export interface InstanceRow {
   beneficiary_id: string | null;
   program_id: string | null;
   responsible_user_id: string | null;
+  parent_instance_id: string | null;
   started_by: string;
   started_at: string;
   finished_at: string | null;

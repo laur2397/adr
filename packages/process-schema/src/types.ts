@@ -87,7 +87,9 @@ export type ActionType =
   | 'grant_access'
   | 'pause_deadline'
   | 'resume_deadline'
-  | 'update_budget_lines';
+  | 'update_budget_lines'
+  | 'create_debt'
+  | 'update_project';
 
 export interface Action {
   type: ActionType;
@@ -136,6 +138,10 @@ export interface StepDef {
   join?: 'all' | 'any';
   next?: string;
   subflow?: string;
+  /** subflow: child field key -> parent field key, copied when the child starts */
+  inputs?: Record<string, string>;
+  /** subflow: parent field key -> child field key (or $status), copied when the child ends */
+  outputs?: Record<string, string>;
   onEnter?: Action[];
   onExit?: Action[];
 }
@@ -154,6 +160,8 @@ export interface ProcessDefinition {
   documents?: Array<{ key: string; template: string; docType: string; pdf?: boolean; signatureLevel?: SignatureLevel }>;
   deadlines?: Array<{ key: string; definition: string; startsAt?: string; stopsAt?: string[]; when?: JsonLogic }>;
   separationOfDuties?: Array<{ steps: string[]; message: string }>;
+  conflictOfInterest?: { steps: string[]; statement?: string };
+  invoiceCheck?: { list: string; supplier: string; number: string; date?: string; amount?: string };
   steps: StepDef[];
 }
 

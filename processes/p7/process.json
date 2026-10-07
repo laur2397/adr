@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "key": "p7_decisions",
+  "name": "Decizii ale directorului",
+  "description": "Pachetul P7: proiect de decizie din șablon, avize (compartiment, juridic), număr din registrul deciziilor, semnarea directorului și comunicarea.",
+  "subject": { "requires": [] },
+  "fields": [
+    { "key": "decision_type", "label": "Tipul deciziei", "type": "choice", "nomenclature": "decision_type" },
+    { "key": "decision_subject", "label": "Titlul deciziei", "type": "text" },
+    { "key": "legal_basis", "label": "Temeiul legal („Având în vedere…”)", "type": "textarea" },
+    { "key": "articles", "label": "Articole (dispozitiv)", "type": "textarea" },
+    { "key": "effective_date", "label": "Data intrării în vigoare", "type": "date" },
+    { "key": "recipients", "label": "Se comunică la", "type": "textarea" },
+    { "key": "legal_opinion", "label": "Aviz de legalitate", "type": "textarea" }
+  ],
+  "documents": [{ "key": "decision", "template": "p7_decision", "docType": "director_decision", "signatureLevel": "qualified" }],
+  "separationOfDuties": [],
+  "steps": [
+    {
+      "key": "draft",
+      "type": "start",
+      "name": "Proiect de decizie",
+      "fieldAccess": { "decision_type": "required", "decision_subject": "required", "legal_basis": "required", "articles": "required", "effective_date": "editable", "recipients": "required", "legal_opinion": "hidden" },
+      "paths": [
+        { "key": "submit", "label": "Trimite la avizare", "to": "head_review" },
+        { "key": "cancel", "label": "Renunță", "to": "cancelled", "kind": "reject", "requiresComment": true }
+      ]
+    },
+    {
+      "key": "head_review",
+      "type": "human",
+      "name": "Aviz șef compartiment",
+      "assignment": { "rule": "department_head", "step": "draft" },
+      "paths": [
+        { "key": "endorse", "label": "Avizează", "to": "legal_review" },
+        { "key": "return", "label": "Returnează", "to": "draft", "kind": "return" }
+      ]
+    },
+    {
+      "key": "legal_review",
+      "type": "human",
+      "name": "Aviz de legalitate",
+      "assignment": { "rule": "role_queue", "role": "legal_advisor" },
+      "fieldAccess": { "legal_opinion": "required", "articles": "editable", "legal_basis": "editable" },
+      "paths": [
+        { "key": "favorable", "label": "Aviz favorabil", "to": "director_signature" },
+        { "key": "return", "label": "Returnează inițiatorului", "to": "draft", "kind": "return" }
+      ]
+    },
+    {
+      "key": "director_signature",
+      "type": "human",
+      "name": "Semnare director",
+      "assignment": { "rule": "role_queue", "role": "director" },
+      "onEnter": [
+        { "type": "register", "register": "decisions", "direction": "internal", "once": true },
+        { "type": "generate_document", "document": "decision" }
+      ],
+      "paths": [
+        { "key": "sign", "label": "Semnează decizia", "to": "communicate", "requiresSignatures": ["decision"] },
+        { "key": "return", "label": "Returnează", "to": "legal_review", "kind": "return" }
+      ]
+    },
+    {
+      "key": "communicate",
+      "type": "system",
+      "name": "Comunicare",
+      "onEnter": [{ "type": "notify", "to": "role:head_of_unit", "template": "p7_decision_notice", "title": "Decizie nouă semnată de director" }],
+      "next": "done"
+    },
+    { "key": "done", "type": "end_positive", "name": "În vigoare" },
+    { "key": "cancelled", "type": "end_negative", "name": "Anulat" }
+  ]
+}

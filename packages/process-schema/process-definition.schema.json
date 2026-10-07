@@ -180,6 +180,52 @@
       "items": {
         "$ref": "#/$defs/step"
       }
+    },
+    "conflictOfInterest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "steps"
+      ],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key"
+          }
+        },
+        "statement": {
+          "type": "string"
+        }
+      },
+      "description": "steps whose actor must declare the absence of a conflict of interest (Legea 184/2016, art. 61 Reg. 2018/1046) before acting"
+    },
+    "invoiceCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "list",
+        "supplier",
+        "number"
+      ],
+      "properties": {
+        "list": {
+          "$ref": "#/$defs/key"
+        },
+        "supplier": {
+          "$ref": "#/$defs/key"
+        },
+        "number": {
+          "$ref": "#/$defs/key"
+        },
+        "date": {
+          "$ref": "#/$defs/key"
+        },
+        "amount": {
+          "$ref": "#/$defs/key"
+        }
+      },
+      "description": "columns of a line_items field identifying invoices, for double-funding detection"
     }
   },
   "$defs": {
@@ -432,7 +478,9 @@
             "grant_access",
             "pause_deadline",
             "resume_deadline",
-            "update_budget_lines"
+            "update_budget_lines",
+            "create_debt",
+            "update_project"
           ]
         },
         "when": {
@@ -528,6 +576,36 @@
           "then": {
             "required": [
               "deadline"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "create_debt"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "principal",
+              "dueDate",
+              "reason"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "update_project"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "set"
             ]
           }
         }
@@ -699,6 +777,20 @@
           "items": {
             "$ref": "#/$defs/action"
           }
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "subflow: child field key -> parent field key copied when the child starts"
+        },
+        "outputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "subflow: parent field key -> child field key (or $status) copied when the child ends"
         }
       },
       "allOf": [

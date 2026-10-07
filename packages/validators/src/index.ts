@@ -96,6 +96,20 @@ export function compareAmounts(a: Amount, b: Amount): number {
   return d < 0n ? -1 : d > 0n ? 1 : 0;
 }
 
+/** amount × factor (quantity, VAT rate), rounded half away from zero to the ban. */
+export function multiplyAmount(amount: Amount, factor: number | string): Amount {
+  const f = String(factor).replace(',', '.');
+  const m = /^(-?)(\d+)(?:\.(\d{1,6}))?$/.exec(f);
+  if (!m) throw new Error(`Invalid factor: ${factor}`);
+  const decimals = (m[3] ?? '').length;
+  const scaled = BigInt(m[2]! + (m[3] ?? '')) * (m[1] ? -1n : 1n);
+  const denom = 10n ** BigInt(decimals);
+  const product = toBani(amount) * scaled;
+  const half = denom / 2n;
+  const rounded = product >= 0n ? (product + half) / denom : -((-product + half) / denom);
+  return fromBani(denom === 1n ? product : rounded);
+}
+
 /** "1234567.5" -> "1.234.567,50" */
 export function formatAmount(amount: Amount): string {
   const [int, dec] = fromBani(toBani(amount)).split('.') as [string, string];

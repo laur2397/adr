@@ -27,5 +27,15 @@ await tx(async (db) => {
   const { organizationId } = await seedBase(db, base, (m) => console.log(m));
   if (demo) await seedDemo(db, organizationId, env.DEMO_PASSWORD ?? base.adminPassword, (m) => console.log(m));
 });
+if (demo && env.SEED_SIMULATE !== 'false') {
+  const { simulate } = await import('../seed/simulate.js');
+  const already = await (await import('../core/db.js')).query(getPool(), `select count(*)::int as n from flux.instance`);
+  if (already[0]!.n === 0) {
+    console.log('simulare activitate demo (poate dura câteva minute)...');
+    await simulate({ password: env.DEMO_PASSWORD ?? base.adminPassword, days: Number(env.SIMULATE_DAYS ?? 150), log: (m) => console.log(m) });
+  } else {
+    console.log('există deja dosare; simularea nu se repetă');
+  }
+}
 console.log('seed complete');
 await closePool();

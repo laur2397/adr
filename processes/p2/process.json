@@ -296,6 +296,23 @@
           "type": "register",
           "register": "procurements",
           "direction": "internal"
+        },
+        {
+          "type": "start_subflow",
+          "subflow": "p4_irregularities",
+          "when": {
+            "==": [
+              {
+                "var": "fields.verdict"
+              },
+              "aviz_cu_corectie"
+            ]
+          },
+          "inputs": {
+            "source": "=verificare_achizitie",
+            "suspicion": "findings",
+            "affected_amount": "correction_amount"
+          }
         }
       ],
       "next": "done"
@@ -310,5 +327,12 @@
       "type": "end_negative",
       "name": "Anulat"
     }
-  ]
+  ],
+  "conflictOfInterest": {
+    "steps": [
+      "procurement_check",
+      "head_review",
+      "director_approval"
+    ]
+  }
 }

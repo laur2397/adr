@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "key": "p3_addenda",
+  "name": "Acte adiționale și notificări la contract",
+  "description": "Pachetul P3: cererea beneficiarului, analiza tehnică și financiară, avizul juridic (pentru actele adiționale), aprobarea, înregistrarea și actualizarea datelor contractului.",
+  "subject": { "requires": ["project", "beneficiary"] },
+  "fields": [
+    { "key": "request_no", "label": "Număr solicitare beneficiar", "type": "text" },
+    { "key": "request_date", "label": "Data solicitării", "type": "date" },
+    { "key": "kind", "label": "Tip modificare", "type": "choice", "nomenclature": "addendum_kind" },
+    { "key": "smis_code", "label": "Cod SMIS", "type": "text", "prefill": { "from": "project", "path": "smis_code" } },
+    { "key": "contract_number", "label": "Contract de finanțare", "type": "text", "prefill": { "from": "project", "path": "contract_number" } },
+    { "key": "current_end_date", "label": "Data de finalizare actuală", "type": "date", "prefill": { "from": "project", "path": "end_date" } },
+    { "key": "current_eligible_value", "label": "Valoare eligibilă actuală", "type": "amount", "prefill": { "from": "project", "path": "eligible_value" } },
+    { "key": "changes", "label": "Modificări solicitate", "type": "textarea" },
+    { "key": "justification", "label": "Justificarea beneficiarului", "type": "textarea" },
+    { "key": "new_end_date", "label": "Noua dată de finalizare", "type": "date" },
+    { "key": "new_eligible_value", "label": "Noua valoare eligibilă", "type": "amount" },
+    { "key": "analysis", "label": "Analiza expertului", "type": "textarea" },
+    { "key": "legal_opinion", "label": "Aviz juridic", "type": "textarea" },
+    { "key": "decision", "label": "Propunere", "type": "choice", "nomenclature": "addendum_decision" },
+    {
+      "key": "is_addendum",
+      "label": "Necesită act adițional",
+      "type": "calculated",
+      "resultType": "boolean",
+      "formula": { "==": [{ "var": "fields.kind" }, "act_aditional"] }
+    }
+  ],
+  "documents": [
+    { "key": "analysis_note", "template": "p3_analysis_note", "docType": "addendum_analysis_note", "signatureLevel": "qualified" },
+    { "key": "addendum", "template": "p3_addendum", "docType": "addendum", "signatureLevel": "qualified" }
+  ],
+  "deadlines": [{ "key": "analysis", "definition": "addendum_analysis", "stopsAt": ["director_approval"] }],
+  "separationOfDuties": [{ "steps": ["analysis", "head_review"], "message": "Cel care a întocmit analiza nu o poate aviza." }],
+  "steps": [
+    {
+      "key": "registration",
+      "type": "start",
+      "name": "Înregistrare solicitare",
+      "fieldAccess": {
+        "request_no": "required", "request_date": "required", "kind": "required", "changes": "required", "justification": "editable",
+        "new_end_date": "editable", "new_eligible_value": "editable", "analysis": "hidden", "legal_opinion": "hidden", "decision": "hidden"
+      },
+      "paths": [
+        { "key": "register", "label": "Înregistrează și repartizează", "to": "analysis", "actions": [{ "type": "register", "register": "general", "direction": "in" }] },
+        { "key": "cancel", "label": "Anulează", "to": "cancelled", "kind": "reject", "requiresComment": true }
+      ]
+    },
+    {
+      "key": "analysis",
+      "type": "human",
+      "name": "Analiză tehnică și financiară",
+      "assignment": { "rule": "project_expert", "role": "ei_expert" },
+      "fieldAccess": { "analysis": "required", "decision": "required", "new_end_date": "editable", "new_eligible_value": "editable", "legal_opinion": "hidden" },
+      "paths": [
+        { "key": "submit", "label": "Trimite la avizare", "to": "needs_legal", "requiresSignatures": ["analysis_note"] }
+      ]
+    },
+    {
+      "key": "needs_legal",
+      "type": "decision",
+      "name": "Este act adițional?",
+      "paths": [
+        { "key": "yes", "label": "Da", "to": "legal_review", "visibleWhen": { "==": [{ "var": "fields.is_addendum" }, true] } },
+        { "key": "no", "label": "Nu", "to": "head_review", "visibleWhen": { "!=": [{ "var": "fields.is_addendum" }, true] } }
+      ]
+    },
+    {
+      "key": "legal_review",
+      "type": "human",
+      "name": "Aviz juridic",
+      "assignment": { "rule": "role_queue", "role": "legal_advisor" },
+      "fieldAccess": { "legal_opinion": "required" },
+      "paths": [
+        { "key": "favorable", "label": "Aviz favorabil", "to": "head_review" },
+        { "key": "return", "label": "Returnează la expert", "to": "analysis", "kind": "return" }
+      ]
+    },
+    {
+      "key": "head_review",
+      "type": "human",
+      "name": "Avizare șef serviciu",
+      "assignment": { "rule": "department_head", "step": "analysis" },
+      "paths": [
+        { "key": "endorse", "label": "Avizează", "to": "director_approval", "requiresSignatures": ["analysis_note"] },
+        { "key": "return", "label": "Returnează", "to": "analysis", "kind": "return" }
+      ]
+    },
+    {
+      "key": "director_approval",
+      "type": "human",
+      "name": "Aprobare director",
+      "assignment": { "rule": "role_queue", "role": "director" },
+      "onEnter": [{ "type": "generate_document", "document": "addendum", "when": { "==": [{ "var": "fields.decision" }, "aprobare"] } }],
+      "paths": [
+        {
+          "key": "approve",
+          "label": "Aprobă și semnează",
+          "to": "apply",
+          "visibleWhen": { "==": [{ "var": "fields.decision" }, "aprobare"] },
+          "requiresSignatures": ["analysis_note", "addendum"]
+        },
+        {
+          "key": "reject",
+          "label": "Respinge solicitarea",
+          "to": "rejected",
+          "kind": "reject",
+          "requiresComment": true,
+          "actions": [{ "type": "register", "register": "general", "direction": "out" }]
+        },
+        { "key": "return", "label": "Returnează", "to": "head_review", "kind": "return" }
+      ]
+    },
+    {
+      "key": "apply",
+      "type": "system",
+      "name": "Înregistrare și actualizarea contractului",
+      "onEnter": [
+        { "type": "register", "register": "addenda", "direction": "internal" },
+        { "type": "register", "register": "general", "direction": "out", "document": "addendum" },
+        { "type": "update_project", "set": { "end_date": "new_end_date", "eligible_value": "new_eligible_value" } },
+        { "type": "notify", "to": "beneficiary_email", "template": "p3_addendum_email", "attach": ["addendum"] }
+      ],
+      "next": "done"
+    },
+    { "key": "done", "type": "end_positive", "name": "Aprobat" },
+    { "key": "rejected", "type": "end_negative", "name": "Respins" },
+    { "key": "cancelled", "type": "end_negative", "name": "Anulat" }
+  ]
+}

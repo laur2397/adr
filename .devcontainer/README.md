@@ -1,7 +1,8 @@
 # Flux AM – demo în GitHub Codespaces
 
-Platforma pornește singură: la prima creare durează 3–5 minute (instalare, construirea
-interfeței, baza de date cu date demo). Apoi se deschide automat în browser; dacă nu, deschideți
+Platforma pornește singură: la prima creare durează 6–10 minute (instalare, construirea
+interfeței, baza de date și simularea activității demo: circa 70 de dosare din toate tipurile, lucrate
+de utilizatorii demo în ultimele 5 luni). Apoi se deschide automat în browser; dacă nu, deschideți
 fila **PORTS** și apăsați pe globul de lângă **Flux AM (3000)**.
 
 **Utilizatori demo** – parola pentru toți: `Demo-parola-2026`
@@ -16,7 +17,17 @@ fila **PORTS** și apăsați pe globul de lângă **Flux AM (3000)**.
 | `cfpp` | Control financiar preventiv |
 | `director` | Director (vede tot, tablou de bord) |
 | `auditor` | Auditor |
-| `admin` | Administrator funcțional |
+| `nereguli`, `sef.sn` | Ofițer și șef serviciu nereguli |
+| `contabil`, `sef.fc` | Serviciul financiar-contabil |
+| `juridic` | Consilier juridic |
+| `admin` | Administrator funcțional (vede toate dosarele) |
+
+**Pentru a vedea tot ce au lucrat ceilalți:** intrați ca `director` (Panoul meu cu documente de semnat,
+Dosare – toate, Tablou de bord, Nereguli, Debitori, Eșantionare, Arhivă) sau ca `admin` (în plus
+Administrare: utilizatori, termene, procese cu diagrama fluxului, audit, integrări).
+
+**Codespace creat înainte de actualizare?** În terminal rulați `bash .devcontainer/reset-demo.sh`
+(3–6 minute), apoi reîncărcați pagina.
 
 **Încercați:** `registratura` → Dosar nou → „Verificarea cererii de rambursare” → proiectul 302145 →
 completați numărul, tipul și data → Înregistrează. Apoi `evf1` → cheltuieli, constatări, listă de
