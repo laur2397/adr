@@ -60,7 +60,7 @@ export function CommentsPanel({ instanceId }: { instanceId: string }) {
   );
 }
 
-export function CoiBanner({ instanceId, coi }: { instanceId: string; coi: { required: boolean; declared: boolean; hasConflict: boolean } }) {
+export function CoiBanner({ instanceId, coi, onDeclared }: { instanceId: string; coi: { required: boolean; declared: boolean; hasConflict: boolean }; onDeclared?: () => void }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [conflict, setConflict] = useState(false);
@@ -70,6 +70,7 @@ export function CoiBanner({ instanceId, coi }: { instanceId: string; coi: { requ
     mutationFn: () => api.post(`/instances/${instanceId}/coi`, { hasConflict: conflict, details }),
     onSuccess: () => {
       setOpen(false);
+      onDeclared?.();
       qc.invalidateQueries();
     },
   });

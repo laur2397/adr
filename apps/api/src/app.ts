@@ -25,6 +25,7 @@ import { controlRoutes } from './controls/routes.js';
 import { archiveRoutes } from './archive/routes.js';
 import { integrationRoutes } from './integrations/hooks/routes.js';
 import { mailRoutes } from './integrations/mail/routes.js';
+import { visitRoutes } from './visits/routes.js';
 import { resolveApiToken } from './integrations/hooks/token.js';
 
 declare module 'fastify' {
@@ -138,6 +139,7 @@ export async function buildApp(opts: { logger?: boolean } = {}): Promise<Fastify
   await app.register(archiveRoutes, { prefix: '/api/v1' });
   await app.register(integrationRoutes, { prefix: '/api/v1' });
   await app.register(mailRoutes, { prefix: '/api/v1' });
+  await app.register(visitRoutes, { prefix: '/api/v1' });
 
   // Production: the API also serves the built web app (WEB_DIST), with client-side routing fallback.
   const webDist = process.env.WEB_DIST;
@@ -149,7 +151,9 @@ export async function buildApp(opts: { logger?: boolean } = {}): Promise<Fastify
     });
   }
 
-  app.addHook('onSend', async (_req, reply, payload) => {
+  app.addHook('onSend', async (req, reply, payload) => {
+    // The service worker and the manifest must be revalidated, or browsers keep an old app shell.
+    if (req.url === '/sw.js' || req.url === '/manifest.webmanifest') reply.header('cache-control', 'no-cache');
     reply.header('x-content-type-options', 'nosniff');
     reply.header('referrer-policy', 'same-origin');
     reply.header('x-frame-options', 'DENY');

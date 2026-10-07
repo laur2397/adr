@@ -1,0 +1,12 @@
+{
+  "name": "Flux AM",
+  "short_name": "Flux AM",
+  "description": "Management electronic al documentelor și fluxurilor; modul de teren pentru verificări la fața locului.",
+  "lang": "ro",
+  "start_url": "/vizite",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f7",
+  "theme_color": "#0f5c5c",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

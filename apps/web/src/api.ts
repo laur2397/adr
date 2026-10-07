@@ -67,6 +67,7 @@ export const can = {
   audit: (me: Me) => me.roles.some((r) => ['auditor', 'functional_admin', 'director', 'head_of_unit'].includes(r)),
   debts: (me: Me) => me.roles.some((r) => ['accountant', 'irregularity_officer', 'head_of_unit', 'director', 'functional_admin', 'auditor'].includes(r)),
   irregularities: (me: Me) => me.roles.some((r) => ['irregularity_officer', 'head_of_unit', 'director', 'functional_admin', 'auditor'].includes(r)),
+  visits: (me: Me) => me.roles.some((r) => ['ei_expert', 'head_of_unit', 'director', 'functional_admin', 'auditor'].includes(r)),
   sampling: (me: Me) => me.roles.some((r) => ['head_of_unit', 'director', 'functional_admin', 'auditor'].includes(r)),
   archive: (me: Me) => me.roles.some((r) => ['registry_inspector', 'functional_admin', 'head_of_unit', 'director', 'auditor'].includes(r)),
   integrations: (me: Me) => me.roles.some((r) => ['functional_admin', 'it_admin'].includes(r)),

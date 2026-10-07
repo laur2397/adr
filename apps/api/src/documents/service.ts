@@ -7,6 +7,7 @@ import { AppError, notFound } from '../core/errors.js';
 import { loadFields } from '../forms/store.js';
 import { entriesForInstance } from '../registry/service.js';
 import { invalidateDocumentSignatures } from '../signing/invalidate.js';
+import { appendEvidenceAnnex, listEvidence } from '../visits/evidence.js';
 import { loadInstance, type InstanceContext } from '../workflow/load.js';
 import { docxToPdf, pdfConversionAvailable, renderDocx } from './render.js';
 import { getFile, putFile } from './storage.js';
@@ -106,6 +107,14 @@ export async function templateData(db: Db, ctx: InstanceContext): Promise<Record
       where t.instance_id = $1 and t.status = 'completed' order by t.step_key, t.completed_at desc`,
     [ctx.instance.id],
   );
+  // A step still in progress is signed by whoever holds it now (e.g. the inspector drafting the report).
+  const holders = await query(
+    db,
+    `select t.step_key, u.full_name, u.job_title from task t join app_user u on u.id = t.assignee_user_id
+      where t.instance_id = $1 and t.status = 'open'`,
+    [ctx.instance.id],
+  );
+  for (const h of holders) if (!people.some((p) => p.step_key === h.step_key)) people.push(h);
   const checklist = await query(
     db,
     `select ci.position, ci.code, ci.question, ci.legal_basis, r.answer, r.observation, r.verifier_role
@@ -163,6 +172,7 @@ export async function generateDocument(actor: AuditActor & { userId: string }, i
   } catch (err) {
     throw new AppError(422, `Șablonul „${tpl.name}” nu a putut fi completat: ${(err as Error).message}`);
   }
+  if (spec.appendEvidence) docx = await appendEvidenceAnnex(docx, await listEvidence(pool, ctx.instance.id));
   const wantPdf = spec.pdf !== false && (await pdfConversionAvailable());
   const pdf = wantPdf ? await docxToPdf(docx) : null;
   const baseName = `${tpl.name}${ctx.instance.reference_no ? ` ${ctx.instance.reference_no.replace(/[/\\]/g, '-')}` : ''}`;

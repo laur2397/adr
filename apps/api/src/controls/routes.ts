@@ -164,7 +164,14 @@ export async function controlRoutes(app: FastifyInstance) {
     if (!canSample(user)) throw forbidden();
     const plan = await maybeOne(getPool(), `select * from sampling_plan where id = $1 and organization_id = $2`, [req.params.id, user.organizationId]);
     if (!plan) throw notFound('Planul de eșantionare');
-    return plan;
+    const visits = await query(
+      getPool(),
+      `select v.sampled_instance_id, v.visit_instance_id, i.status, i.reference_no,
+              (select string_agg(t.name, ', ') from task t where t.instance_id = i.id and t.status = 'open') as current_step
+         from sampling_visit v join instance i on i.id = v.visit_instance_id where v.sampling_plan_id = $1`,
+      [plan.id],
+    );
+    return { ...plan, visits };
   });
 
   // ------------------------------------------------------------- irregularities for IMS

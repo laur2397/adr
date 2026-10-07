@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { NavLink, Route, Routes, useNavigate } from 'react-router';
-import { api, can, type Me } from './api';
+import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { api, ApiError, can, type Me } from './api';
 import { Loading, MeContext } from './components/ui';
 import { Account } from './pages/Account';
 import { Admin } from './pages/Admin';
@@ -17,10 +17,39 @@ import { Debts, Irregularities } from './pages/Debts';
 import { Mail } from './pages/Mail';
 import { Sampling } from './pages/Sampling';
 import { SearchPage } from './pages/Search';
+import { FieldVisit } from './pages/FieldVisit';
+import { Visits } from './pages/Visits';
+
+const ME_KEY = 'flux.me';
+
+/** The current user; without signal the last known one is used, so the field page opens offline. */
+async function loadMe(): Promise<Me | null> {
+  try {
+    const me = await api.get<Me>('/me');
+    try {
+      localStorage.setItem(ME_KEY, JSON.stringify(me));
+    } catch {
+      /* storage full or disabled */
+    }
+    return me;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 0) {
+      const cached = localStorage.getItem(ME_KEY);
+      if (cached) return JSON.parse(cached) as Me;
+    }
+    try {
+      localStorage.removeItem(ME_KEY);
+    } catch {
+      /* storage disabled */
+    }
+    throw err;
+  }
+}
 
 export function App() {
   const qc = useQueryClient();
-  const me = useQuery({ queryKey: ['me'], queryFn: () => api.get<Me>('/me'), retry: false, staleTime: 60_000 });
+  const location = useLocation();
+  const me = useQuery({ queryKey: ['me'], queryFn: loadMe, retry: false, staleTime: 60_000 });
 
   useEffect(() => {
     const onUnauthorized = () => qc.setQueryData(['me'], null);
@@ -32,7 +61,13 @@ export function App() {
   if (!me.data) return <Login onLoggedIn={() => qc.invalidateQueries()} />;
   return (
     <MeContext.Provider value={me.data}>
-      <Layout me={me.data} />
+      {location.pathname.startsWith('/teren/') ? (
+        <Routes>
+          <Route path="/teren/:id" element={<FieldVisit />} />
+        </Routes>
+      ) : (
+        <Layout me={me.data} />
+      )}
     </MeContext.Provider>
   );
 }
@@ -43,6 +78,11 @@ function Layout({ me }: { me: Me }) {
   const notifications = useQuery({ queryKey: ['notifications'], queryFn: () => api.get('/notifications'), refetchInterval: 60_000 });
   const logout = async () => {
     await api.post('/auth/logout');
+    try {
+      localStorage.removeItem(ME_KEY);
+    } catch {
+      /* storage disabled */
+    }
     qc.clear();
     qc.setQueryData(['me'], null);
     navigate('/');
@@ -96,10 +136,11 @@ function Layout({ me }: { me: Me }) {
           <NavLink to="/dosar-nou">Dosar nou</NavLink>
           {can.readRegisters(me) && <NavLink to="/registre">Registre</NavLink>}
           {can.register(me) && <NavLink to="/corespondenta">Corespondență e-mail</NavLink>}
-          {(can.debts(me) || can.irregularities(me) || can.sampling(me) || can.archive(me)) && <div className="section">Control și evidențe</div>}
+          {(can.debts(me) || can.irregularities(me) || can.sampling(me) || can.archive(me) || can.visits(me)) && <div className="section">Control și evidențe</div>}
           {can.irregularities(me) && <NavLink to="/nereguli">Nereguli</NavLink>}
           {can.debts(me) && <NavLink to="/debitori">Debitori</NavLink>}
           {can.sampling(me) && <NavLink to="/esantionare">Eșantionare</NavLink>}
+          {can.visits(me) && <NavLink to="/vizite">Vizite pe teren</NavLink>}
           {can.archive(me) && <NavLink to="/arhiva">Arhivă</NavLink>}
           {can.dashboard(me) && (
             <>
@@ -129,6 +170,7 @@ function Layout({ me }: { me: Me }) {
             <Route path="/debitori" element={<Debts />} />
             <Route path="/nereguli" element={<Irregularities />} />
             <Route path="/esantionare" element={<Sampling />} />
+            <Route path="/vizite" element={<Visits />} />
             <Route path="/arhiva" element={<Archive />} />
             <Route path="/corespondenta" element={<Mail />} />
             <Route path="/admin/*" element={<Admin />} />

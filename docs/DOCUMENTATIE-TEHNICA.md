@@ -14,27 +14,28 @@ IT și auditori tehnici. Detalii suplimentare pe teme punctuale:
 4. [Modelul de date](#4-modelul-de-date)
 5. [Motorul de flux](#5-motorul-de-flux)
 6. [Limbajul definițiilor de proces](#6-limbajul-definițiilor-de-proces)
-7. [Procesele livrate (P1–P7)](#7-procesele-livrate-p1p7)
+7. [Procesele livrate (P1–P8)](#7-procesele-livrate-p1p8)
 8. [Formulare, sume și calcule](#8-formulare-sume-și-calcule)
 9. [Registre și numerotare](#9-registre-și-numerotare)
 10. [Termene](#10-termene)
 11. [Documente și semnătură](#11-documente-și-semnătură)
 12. [Controale de verificare (art. 74)](#12-controale-de-verificare-art-74)
-13. [Nereguli și debitori](#13-nereguli-și-debitori)
-14. [Arhivă](#14-arhivă)
-15. [Colaborare, căutare, notificări](#15-colaborare-căutare-notificări)
-16. [Integrări](#16-integrări)
-17. [Securitate și acces](#17-securitate-și-acces)
-18. [Jurnalul de audit](#18-jurnalul-de-audit)
-19. [API REST](#19-api-rest)
-20. [Interfața web](#20-interfața-web)
-21. [Joburi în fundal (worker)](#21-joburi-în-fundal-worker)
-22. [Configurare (variabile de mediu)](#22-configurare-variabile-de-mediu)
-23. [Instalare, operare, backup](#23-instalare-operare-backup)
-24. [Date demo și simulatorul](#24-date-demo-și-simulatorul)
-25. [Testare](#25-testare)
-26. [Extindere: cum adaugi un proces nou](#26-extindere-cum-adaugi-un-proces-nou)
-27. [Limitări cunoscute și pași următori](#27-limitări-cunoscute-și-pași-următori)
+13. [Verificări la fața locului și modulul de teren](#13-verificări-la-fața-locului-și-modulul-de-teren)
+14. [Nereguli și debitori](#14-nereguli-și-debitori)
+15. [Arhivă](#15-arhivă)
+16. [Colaborare, căutare, notificări](#16-colaborare-căutare-notificări)
+17. [Integrări](#17-integrări)
+18. [Securitate și acces](#18-securitate-și-acces)
+19. [Jurnalul de audit](#19-jurnalul-de-audit)
+20. [API REST](#20-api-rest)
+21. [Interfața web](#21-interfața-web)
+22. [Joburi în fundal (worker)](#22-joburi-în-fundal-worker)
+23. [Configurare (variabile de mediu)](#23-configurare-variabile-de-mediu)
+24. [Instalare, operare, backup](#24-instalare-operare-backup)
+25. [Date demo și simulatorul](#25-date-demo-și-simulatorul)
+26. [Testare](#26-testare)
+27. [Extindere: cum adaugi un proces nou](#27-extindere-cum-adaugi-un-proces-nou)
+28. [Limitări cunoscute și pași următori](#28-limitări-cunoscute-și-pași-următori)
 
 ---
 
@@ -163,7 +164,8 @@ automat la pornire (sau cu `pnpm db:migrate`), în ordine, o singură dată.
 | Documente | `document_template`, `document`, `document_version`, `signature` |
 | Registratură | `correspondent`, `register`, `register_counter`, `register_entry`, `mail_message` |
 | Arhivă | `archive_nomenclature_item`, `archive_file` |
-| Controale | `coi_declaration`, `invoice_fingerprint`, `sampling_plan` |
+| Controale | `coi_declaration`, `invoice_fingerprint`, `sampling_plan`, `sampling_visit` |
+| Vizite pe teren | `visit_evidence` (fotografii și semnătură, cu oră, GPS și amprentă) |
 | Nereguli/debite | `debt`, `debt_payment` |
 | Colaborare | `instance_comment`, `notification` |
 | Infrastructură | `job_outbox`, `webhook`, `audit_event`, `processing_activity` |
@@ -255,7 +257,7 @@ pentru sume exacte: `amount_add`, `amount_sub`, `amount_mul`, `amount_sum`, `amo
 `amount_lt`, `amount_gte`, `amount_eq`. Nu se execută cod arbitrar din definiții
 (`safeEvaluate` prinde orice eroare de evaluare).
 
-## 7. Procesele livrate (P1–P7)
+## 7. Procesele livrate (P1–P8)
 
 Fiecare proces se află în `processes/<pN>/process.json`.
 
@@ -297,6 +299,11 @@ creanță (`create_debt`) și registrul debitorilor, sau clasare dacă neregula 
 ### P7 – Decizii ale directorului
 Proiect → Aviz șef compartiment → Aviz de legalitate → Semnare director → Comunicare. Numărul
 deciziei se alocă înainte de semnare și se păstrează la returnare.
+
+### P8 – Verificare la fața locului
+Programare (din eșantion sau la cerere) → notificarea beneficiarului → vizita (listă de verificare,
+fotografii cu GPS, semnătura reprezentantului) → avizare șef → aprobare director → comunicare →
+încheiere, urmărirea recomandărilor sau sesizare automată P4. Detalii în secțiunea 13.
 
 Roluri folosite: `registry_inspector`, `evf_expert`, `ei_expert`, `procurement_expert`,
 `head_of_unit`, `director`, `cfpp`, `legal_advisor`, `irregularity_officer`, `accountant`,
@@ -386,7 +393,69 @@ auditul poate reproduce exact eșantionul. Metode: `risk_weighted`, `simple_rand
 **Lista IMS** (`GET /irregularities`): neregulile cu impact ≥ 10.000 EUR (curs `EUR_RON`, implicit
 4,97) sau marcate manual pentru raportare.
 
-## 13. Nereguli și debitori
+## 13. Verificări la fața locului și modulul de teren
+
+Pachetul P8 (`processes/p8`) și modulul `apps/api/src/visits/` acoperă verificările la fața locului
+cerute de art. 74 alin. 2 din Regulamentul (UE) 2021/1060, de la eșantion până la urmărirea
+recomandărilor.
+
+**Pornire.** Vizitele se deschid fie din planul de eșantionare (`POST /sampling/:id/visits`
+creează câte un dosar P8 pentru fiecare dosar selectat; tabelul `sampling_visit` împiedică
+dublarea), fie la cerere (Dosar nou → „Verificare la fața locului”). Motivul vizitei
+(`visit_reason`) se completează automat: eșantion – risc ridicat sau selecție aleatorie.
+
+**Circuit.** Programarea vizitei (dată, loc, persoană de contact) → notificarea beneficiarului
+(document generat, înregistrat la ieșire și trimis pe e-mail; numărul din Registrul verificărilor
+la fața locului se alocă acum) → vizita (expertul de monitorizare: listă de verificare cu 12
+puncte, constatări, rezultat, recomandări, fotografii, semnătura reprezentantului) → avizare șef
+serviciu → aprobare director → comunicarea raportului → în funcție de rezultat: încheiere (conform),
+urmărirea recomandărilor cu termen (conform, cu recomandări) sau sesizare automată către nereguli
+(neconform: sub-flux P4, precompletat cu sursa „vizită la fața locului” și constatările). Dacă
+recomandările nu sunt implementate, din urmărire se poate sesiza la fel neregula. Cel care a
+efectuat vizita nu poate aviza raportul (separarea funcțiilor), iar pașii de vizită, avizare și
+aprobare cer declarația privind conflictul de interese.
+
+**Dovezi** (tabel `visit_evidence`): fotografii și semnătura reprezentantului, stocate în
+depozitul adresat după conținut, cu ora de pe dispozitiv (`taken_at`), poziția GPS (latitudine,
+longitudine, precizie), descrierea, autorul, pasul și amprenta SHA-256. Se acceptă doar JPEG și PNG,
+recunoscute după conținut (nu după tipul declarat), maximum 15 MB. Se pot adăuga numai de cel care
+are sarcina la pasul marcat `"evidence": true` și numai cât acesta este deschis. O semnătură nouă o
+înlocuiește pe cea veche; ștergerile sunt logice și auditate. Fiecare dispozitiv generează un
+`clientId` pentru fiecare fotografie, deci o retrimitere după o conexiune căzută nu creează dubluri.
+
+**Validări** la trimiterea raportului: cel puțin o fotografie (`evidence.photos >= 1`), semnătura
+reprezentantului (`evidence.signature`), lista de verificare completă, recomandări și termen când
+rezultatul nu este „conform”, raport semnat. Valorile `evidence.*` și `today` sunt disponibile în
+regulile oricărei definiții de proces.
+
+**Raportul** (`p8_visit_report`) are atributul `appendEvidence`: la generare, după completarea
+șablonului, `appendEvidenceAnnex` adaugă în DOCX o anexă cu fiecare fotografie (descriere, dată și
+oră, coordonate GPS, autor, început de amprentă) și cu semnătura reprezentantului. Anexa se face pe
+DOCX, deci are fonturile șablonului și apare și în PDF.
+
+**Modulul de teren** (`/teren/:id`, pentru telefon sau tabletă):
+
+- listă de verificare cu butoane mari Da / Nu / N/A și observații (obligatorii unde cere lista);
+- fotografii direct din cameră sau din galerie, micșorate pe dispozitiv la maximum 1600 px (JPEG 0,82),
+  cu poziția GPS curentă (cea mai recentă poziție de cel mult 2 minute sau o citire nouă);
+- constatări, rezultat, recomandări, termen;
+- semnătura reprezentantului pe ecran (degetul sau creionul) și numele lui;
+- **funcționare fără semnal**: dosarul se păstrează în IndexedDB (`apps/web/src/offline.ts`), iar
+  fiecare modificare intră într-o coadă locală trimisă în ordine când revine conexiunea (automat la
+  evenimentul `online` și la 30 de secunde). O modificare refuzată de server rămâne vizibilă, cu
+  motivul, și poate fi reîncercată sau abandonată. Aplicația se deschide fără semnal prin service
+  worker (`apps/web/public/sw.js`: pagina din rețea când există, altfel copia locală; fișierele
+  construite din cache), iar utilizatorul curent este reținut local până la ieșirea din cont;
+- semnarea raportului și trimiterea la avizare, când există semnal.
+
+Aplicația se poate instala pe ecranul telefonului (manifest web, `display: standalone`).
+
+**Evidență**: pagina Vizite pe teren (`/vizite`, `GET /visits`) listează vizitele cu data
+programată sau efectuată, beneficiarul, locul, inspectorul, stadiul, numărul de fotografii, semnătura
+și rezultatul, cu indicatori (în curs, efectuate luna aceasta, cu recomandări, neconforme). În dosar,
+fila „Fotografii și semnătură” arată galeria, cu legături la hartă pentru fiecare poziție GPS.
+
+## 14. Nereguli și debitori
 
 - Dosarele P4 pornesc manual sau automat din P2.
 - La aprobare, acțiunea `create_debt` creează debitul (`debt`) cu titlul de creanță, scadența și
@@ -394,7 +463,7 @@ auditul poate reproduce exact eșantionul. Metode: `risk_weighted`, `simple_rand
 - Încasările și compensările (`POST /debts/:id/payments`, tabel `debt_payment`) actualizează soldul;
   restanțele se calculează la data curentă. Pagina Debitori are export Excel.
 
-## 14. Arhivă
+## 15. Arhivă
 
 - Nomenclatorul arhivistic (`archive_nomenclature_item`): indicativ, denumire, termen de păstrare.
 - Dosarele de arhivă (`archive_file`) pe ani; un dosar de lucru se clasează
@@ -403,7 +472,7 @@ auditul poate reproduce exact eșantionul. Metode: `risk_weighted`, `simple_rand
   eliminarea (`/archive/files/:id/dispose`) cere decizia comisiei și avizul Arhivelor Naționale și
   se aprobă de director. Inventarul se exportă în Excel.
 
-## 15. Colaborare, căutare, notificări
+## 16. Colaborare, căutare, notificări
 
 - **Comentarii** pe dosar (`/instances/:id/comments`) cu `@utilizator`: cel menționat primește
   notificare și drept de citire pe dosar.
@@ -413,7 +482,7 @@ auditul poate reproduce exact eșantionul. Metode: `risk_weighted`, `simple_rand
 - **Notificări** în aplicație (`/notifications`) și pe e-mail (prin outbox, dacă `SMTP_URL` e setat):
   sarcini noi, mențiuni, documente de semnat, termene.
 
-## 16. Integrări
+## 17. Integrări
 
 - **ANAF** (`POST /beneficiaries/lookup-anaf`): date firmă după CUI din serviciul public;
   `ANAF_MODE=mock` răspunde din date locale.
@@ -431,7 +500,7 @@ auditul poate reproduce exact eșantionul. Metode: `risk_weighted`, `simple_rand
   sau le ignoră (`POST /mail/:id/process`). Originalul și atașamentele se păstrează cu hash.
 - **Apeluri REST** din definiții (`call_rest`), executate de worker.
 
-## 17. Securitate și acces
+## 18. Securitate și acces
 
 - **Autentificare**: utilizator + parolă (scrypt, N=2^15, r=8, p=1), opțional TOTP (secret criptat
   AES-256-GCM cu `APP_KEY`). Sesiuni pe server (`user_session`), cookie HttpOnly, SameSite,
@@ -448,7 +517,7 @@ auditul poate reproduce exact eșantionul. Metode: `risk_weighted`, `simple_rand
 - **Separarea funcțiilor** și **conflictul de interese** sunt verificate pe server la fiecare acțiune.
 - **Date personale**: `processing_activity` documentează prelucrările (GDPR, registrul activităților).
 
-## 18. Jurnalul de audit
+## 19. Jurnalul de audit
 
 - Fiecare schimbare scrie un eveniment în `audit_event` **în aceeași tranzacție** (fără eveniment,
   schimbarea nu se poate comite): actor, „în numele”, acțiune, entitate, valori vechi/noi, IP,
@@ -460,7 +529,7 @@ auditul poate reproduce exact eșantionul. Metode: `risk_weighted`, `simple_rand
 - Jurnalul unui dosar: fila „Istoric/Audit” (`GET /instances/:id/audit`); jurnalul global în
   Administrare.
 
-## 19. API REST
+## 20. API REST
 
 Prefix `/api/v1`, JSON, erori în format RFC 7807 (`status`, `title`, `errors[]`, `code`).
 Documentația interactivă OpenAPI: `/api/docs`. Rute principale:
@@ -474,6 +543,7 @@ Documentația interactivă OpenAPI: `/api/docs`. Rute principale:
 | Documente | `GET /instances/:id/documents`, `POST /instances/:id/documents`, `POST /instances/:id/documents/:docKey/generate`, `POST /instances/:id/documents/:docKey/sign`, `GET /documents/:id`, `GET /documents/versions/:versionId/content` |
 | Semnături | `GET /signatures/pending`, `POST /signatures/batch`, `GET /signatures/:id`, `POST /signatures/callback/:provider` |
 | Controale | `GET/POST /instances/:id/coi`, `GET /instances/:id/double-funding`, `GET/POST /sampling`, `GET /sampling/:id`, `GET /irregularities` |
+| Vizite pe teren | `POST /sampling/:id/visits`, `GET /visits`, `GET/POST /instances/:id/evidence` (multipart: `file`, `kind`, `caption`, `takenAt`, `latitude`, `longitude`, `accuracy`, `clientId`, `signerName`), `GET /instances/:id/evidence/:eid/content`, `DELETE /instances/:id/evidence/:eid` |
 | Debite | `GET /debts`, `GET /debts/:id`, `POST /debts/:id/payments` |
 | Registre | `GET /registers`, `GET/POST /registers/:key/entries`, `PATCH /registers/:key/entries/:id`, `GET /correspondents` |
 | Arhivă | `GET /archive`, `GET/POST /archive/files`, `GET /archive/files/:id`, `POST /archive/files/:id/close`, `POST /archive/files/:id/dispose`, `GET /archive/disposal`, `POST /archive/nomenclature` |
@@ -497,7 +567,7 @@ Content-Type: application/json
 Răspuns la validare eșuată (422): lista exactă a ce lipsește (câmpuri obligatorii, puncte din lista
 de verificare fără răspuns, documente nesemnate).
 
-## 20. Interfața web
+## 21. Interfața web
 
 `apps/web` – React 19, Vite, react-router 7, TanStack Query; servită de API din `WEB_DIST`.
 
@@ -511,7 +581,9 @@ de verificare fără răspuns, documente nesemnate).
 | Căutare | `/cautare` | căutare globală |
 | Nereguli | `/nereguli` | lista neregulilor, marcaj IMS |
 | Debitori | `/debitori` | sold, încasări, restanțe, export |
-| Eșantionare | `/esantionare` | planuri, previzualizare, scoruri și factori |
+| Eșantionare | `/esantionare` | planuri, previzualizare, scoruri și factori, programarea vizitelor din eșantion |
+| Vizite pe teren | `/vizite` | vizitele programate, în lucru și încheiate, cu indicatori |
+| Modul de teren | `/teren/:id` | pagina pentru telefon: listă de verificare, fotografii cu GPS, semnătură, lucru fără semnal |
 | Arhivă | `/arhiva` | nomenclator, dosare pe ani, eliminare |
 | Corespondență | `/corespondenta` | coada de e-mail |
 | Tablou de bord | `/tablou` | volum pe expert, termene, timp mediu pe pas, blocaje, cozi |
@@ -521,7 +593,7 @@ de verificare fără răspuns, documente nesemnate).
 Meniul se adaptează după roluri (`can.*` în `api.ts`). Accesibilitate: HTML semantic, etichete pe
 toate câmpurile, navigare cu tastatura, contrast WCAG AA.
 
-## 21. Joburi în fundal (worker)
+## 22. Joburi în fundal (worker)
 
 `apps/api/src/worker.ts`:
 
@@ -533,7 +605,7 @@ toate câmpurile, navigare cu tastatura, contrast WCAG AA.
 
 Se pot rula mai multe instanțe de worker; blocarea pe rând evită dubla execuție.
 
-## 22. Configurare (variabile de mediu)
+## 23. Configurare (variabile de mediu)
 
 | Variabilă | Implicit | Rol |
 |---|---|---|
@@ -565,7 +637,7 @@ Se pot rula mai multe instanțe de worker; blocarea pe rând evită dubla execu�
 
 Șablonul complet: `deploy/.env.example`.
 
-## 23. Instalare, operare, backup
+## 24. Instalare, operare, backup
 
 **Producție** (detalii în [deploy/ghid-instalare.md](../deploy/ghid-instalare.md)):
 
@@ -600,7 +672,7 @@ pnpm dev:web      # http://localhost:5173
 portul 3000. `bash .devcontainer/reset-demo.sh` reface baza cu activitatea simulată;
 `bash .devcontainer/run.sh` repornește aplicația. Detalii: [.devcontainer/README.md](../.devcontainer/README.md).
 
-## 24. Date demo și simulatorul
+## 25. Date demo și simulatorul
 
 - `seed/demo.ts`: 16 utilizatori fictivi în 7 compartimente, 9 proiecte cu linii bugetare,
   beneficiari, nomenclatorul de arhivă. Parola tuturor = `ADMIN_PASSWORD`.
@@ -630,7 +702,7 @@ portul 3000. `bash .devcontainer/reset-demo.sh` reface baza cu activitatea simul
   comentarii cu mențiuni, e-mailuri în coadă, un plan de eșantionare, o înlocuire, clasări în arhivă,
   un token API. Rezultatul ultimei rulări: 305 acțiuni, 0 eșecuri, 74 de dosare, 19 sarcini deschise.
 
-## 25. Testare
+## 26. Testare
 
 ```bash
 pnpm -r typecheck
@@ -650,11 +722,12 @@ node tests/load/open-dossier.mjs http://localhost:3000 director <parola> 200 30
 | `apps/api/test/phase2` (16) | P3, P4 ca sub-flux, debite, P6 (TVA, CFPP, separare), P7, conflict de interese, dublă finanțare, eșantionare reproductibilă, căutare, comentarii, arhivă, tokenuri, webhook-uri, e-mail |
 | `db/tests/verify-schema.sh` | 100 de înregistrări concurente → 1..100 fără goluri; lanț de audit sub concurență, refuz UPDATE/DELETE, detectarea alterării; imutabilitatea definițiilor |
 | `tests/e2e/p1.spec.ts` | dosar P1 prin interfață cu patru utilizatori |
+| `apps/api/test/visits` (7) | vizite din eșantion fără dubluri, programare, fotografii cu GPS și semnătură (doar inspectorul, idempotent, doar imagini reale), validările raportului, anexa foto în raport, urmărirea recomandărilor, sesizarea automată P4 |
 | `tests/load` | deschiderea dosarului la 200 de utilizatori concurenți |
 
-Stare la data documentului: toate testele trec (41 de teste API, 30+ de pachete, e2e).
+Stare la data documentului: toate testele trec (48 de teste API, 30+ de pachete, e2e). Modulul de teren a fost verificat și în browser, pe un telefon emulat cu GPS: lucru fără semnal, redeschiderea paginii fără semnal, sincronizare la revenirea semnalului, semnare și trimitere.
 
-## 26. Extindere: cum adaugi un proces nou
+## 27. Extindere: cum adaugi un proces nou
 
 1. Creați `processes/p8/process.json` (porniți de la un proces asemănător) și, dacă e cazul,
    `checklist.json`.
@@ -669,15 +742,16 @@ Stare la data documentului: toate testele trec (41 de teste API, 30+ de pachete,
 Câmpurile, pașii, regulile, termenele și documentele se configurează fără cod. Cod nou este necesar
 doar pentru un tip nou de acțiune sau o integrare nouă.
 
-## 27. Limitări cunoscute și pași următori
+## 28. Limitări cunoscute și pași următori
 
 - Semnătura calificată reală: lipsește adaptorul pentru furnizorul ales (interfața există).
 - Integrarea MySMIS2021 (import automat al cererilor): nu există încă API public; se folosește
   importul Excel.
 - SSO (OIDC / Active Directory): planificat.
 - Editor vizual de procese: acum JSON + diagramă + validare.
-- Opțiuni de cost simplificate, aplicație mobilă pentru vizite pe teren, asistent AI local: în
-  analiza de piață, neimplementate.
+- Opțiuni de cost simplificate și asistent AI local: în analiza de piață, neimplementate.
+- Modulul de teren este o aplicație web instalabilă (nu o aplicație din magazin). Ora fotografiei
+  este cea a dispozitivului; poziția GPS este cea raportată de browser.
 - Termenele legale configurate sunt marcate „de validat juridic” până la confirmarea instituției.
 - Stocarea fișierelor e pe disc local; pentru mai multe servere este nevoie de un volum partajat
   sau de adaptorul S3.

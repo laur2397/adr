@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { api } from '../api';
-import { Badge, Card, Empty, ErrorAlert, Loading } from '../components/ui';
+import { Badge, Card, Empty, ErrorAlert, Loading, useMe } from '../components/ui';
 import { fmtDateTime } from '../format';
 
 function ScoreBar({ score }: { score: number }) {
@@ -17,7 +17,7 @@ function ScoreBar({ score }: { score: number }) {
   );
 }
 
-function SelectionTable({ items, labels }: { items: any[]; labels: Record<string, string> }) {
+function SelectionTable({ items, labels, visits = {} }: { items: any[]; labels: Record<string, string>; visits?: Record<string, any> }) {
   const sorted = [...items].sort((a, b) => Number(b.selected) - Number(a.selected) || b.score - a.score);
   return (
     <div className="table-wrap">
@@ -28,6 +28,7 @@ function SelectionTable({ items, labels }: { items: any[]; labels: Record<string
             <th>Scor de risc</th>
             <th>Factori</th>
             <th>Selectat</th>
+            {Object.keys(visits).length > 0 && <th>Vizită</th>}
           </tr>
         </thead>
         <tbody>
@@ -47,6 +48,17 @@ function SelectionTable({ items, labels }: { items: any[]; labels: Record<string
                   .join(' · ') || '—'}
               </td>
               <td>{i.selected ? <Badge tone="blue">{i.reason}</Badge> : ''}</td>
+              {Object.keys(visits).length > 0 && (
+                <td className="small">
+                  {visits[i.instanceId] ? (
+                    <Link to={`/dosare/${visits[i.instanceId].visit_instance_id}`}>
+                      {visits[i.instanceId].status === 'active' ? (visits[i.instanceId].current_step ?? 'în lucru') : 'încheiată'}
+                    </Link>
+                  ) : (
+                    ''
+                  )}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -70,6 +82,12 @@ export function Sampling() {
     },
   });
   const plan = useQuery({ queryKey: ['sampling', openId], queryFn: () => api.get(`/sampling/${openId}`), enabled: Boolean(openId) });
+  const me = useMe();
+  const canPlan = me.roles.some((r) => ['head_of_unit', 'director', 'functional_admin'].includes(r));
+  const planVisits = useMutation({
+    mutationFn: () => api.post(`/sampling/${openId}/visits`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sampling', openId] }),
+  });
   const set = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
   const labels = list.data?.factorLabels ?? {};
 
@@ -186,11 +204,34 @@ export function Sampling() {
         )}
       </Card>
       {plan.data && (
-        <Card title={plan.data.name} flush>
+        <Card
+          title={plan.data.name}
+          flush
+          actions={
+            canPlan &&
+            plan.data.visits.length < plan.data.items.filter((i: any) => i.selected).length && (
+              <button className="primary small" disabled={planVisits.isPending} onClick={() => planVisits.mutate()}>
+                Programează vizitele ({plan.data.items.filter((i: any) => i.selected).length - plan.data.visits.length})
+              </button>
+            )
+          }
+        >
           <p className="small" style={{ padding: '0.75rem 1rem 0' }}>
             {plan.data.justification}
+            {plan.data.visits.length > 0 && (
+              <>
+                {' '}
+                Vizite deschise din acest plan: {plan.data.visits.length} (<Link to="/vizite">vezi vizitele pe teren</Link>).
+              </>
+            )}
           </p>
-          <SelectionTable items={plan.data.items} labels={labels} />
+          {planVisits.data && (
+            <div className="alert success small" style={{ margin: '0.5rem 1rem' }}>
+              Au fost deschise {planVisits.data.created.length} dosare de verificare la fața locului; fiecare apare în Panoul dvs., la pasul „Programarea vizitei”.
+            </div>
+          )}
+          <ErrorAlert error={planVisits.error} />
+          <SelectionTable items={plan.data.items} labels={labels} visits={Object.fromEntries(plan.data.visits.map((v: any) => [v.sampled_instance_id, v]))} />
         </Card>
       )}
     </div>

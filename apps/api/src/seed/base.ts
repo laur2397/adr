@@ -41,6 +41,8 @@ export const DEADLINES = [
   { key: 'irregularity_finding', name: 'Constatarea neregulii', day_type: 'working', days: 30, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: null, warn_before_days: 5, legal_reference: 'OUG 66/2011 și normele de aplicare (de verificat termenul aplicabil)' },
   { key: 'addendum_analysis', name: 'Analiza solicitării de modificare a contractului', day_type: 'working', days: 15, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: 3, max_paused_days: null, extension_days: null, warn_before_days: 3, legal_reference: 'Țintă internă / manualul de implementare' },
   { key: 'invoice_payment', name: 'Plata facturii', day_type: 'calendar', days: 30, start_point: 'step_entry', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: null, warn_before_days: 5, legal_reference: 'Legea 72/2013 (termen de plată pentru autorități contractante)' },
+  { key: 'onsite_report', name: 'Raportul vizitei la fața locului', day_type: 'working', days: 10, start_point: 'step_entry', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: null, warn_before_days: 2, legal_reference: 'Țintă internă (manualul de proceduri al AM)' },
+  { key: 'onsite_follow_up', name: 'Implementarea recomandărilor vizitei', day_type: 'calendar', days: 30, start_point: 'step_entry', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: 30, warn_before_days: 5, legal_reference: 'Termen stabilit în raportul vizitei (implicit 30 de zile)' },
   { key: 'correspondence_general', name: 'Răspuns la corespondență', day_type: 'calendar', days: 30, start_point: 'registration_date', pause_mode: 'suspend', max_pauses: null, max_paused_days: null, extension_days: null, warn_before_days: 5, legal_reference: 'Regulă internă' },
 ];
 
@@ -58,6 +60,7 @@ export const REGISTERS: Array<[string, string]> = [
   ['necessity_reports', 'Registrul referatelor de necesitate'],
   ['payments', 'Registrul ordonanțărilor de plată'],
   ['cfpp_visas', 'Registrul vizelor de control financiar preventiv'],
+  ['onsite_visits', 'Registrul verificărilor la fața locului'],
 ];
 
 export const NOMENCLATURES: Record<string, { name: string; items: Array<[string, string]> }> = {
@@ -86,6 +89,14 @@ export const NOMENCLATURES: Record<string, { name: string; items: Array<[string,
     name: 'Tipul deciziei',
     items: [['comisie', 'Numire comisie / echipă'], ['procedura', 'Aprobare procedură / regulament'], ['delegare', 'Delegare de atribuții'], ['personal', 'Resurse umane'], ['altele', 'Altele']],
   },
+  visit_reason: {
+    name: 'Motivul vizitei la fața locului',
+    items: [['esantion_risc', 'Eșantion – risc ridicat'], ['esantion_aleator', 'Eșantion – selecție aleatorie'], ['cerere_finala', 'Înaintea cererii de plată finale'], ['monitorizare', 'Vizită de monitorizare'], ['suspiciune', 'Suspiciune / sesizare']],
+  },
+  visit_result: {
+    name: 'Rezultatul vizitei',
+    items: [['conform', 'Conform'], ['conform_cu_recomandari', 'Conform, cu recomandări'], ['neconform', 'Neconform – se sesizează nereguli']],
+  },
   correspondence_category: {
     name: 'Categorie corespondență',
     items: [['corespondenta', 'Corespondență generală'], ['petitie', 'Petiție (OG 27/2002)'], ['informatii_544', 'Informații publice (Legea 544/2001)']],
@@ -111,6 +122,18 @@ async function installTemplates(db: Db, orgId: string, adminId: string) {
       [orgId, key, t.name, stored.storageKey, stored.sha256, adminId],
     );
   }
+}
+
+/** JSON with object keys sorted: jsonb does not keep key order, so a plain stringify would always differ. */
+function canonical(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonical).join(',')}]`;
+  if (v && typeof v === 'object') {
+    return `{${Object.keys(v as object)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${canonical((v as Record<string, unknown>)[k])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(v);
 }
 
 /** Installs or upgrades the process packages: publishes a new version only when the JSON changed. */
@@ -144,7 +167,7 @@ export async function installPackages(db: Db, orgId: string, adminId: string, lo
     const v = validateDefinition(def);
     if (!v.ok) throw new Error(`processes/${dir}/process.json: ${v.problems.map((p) => `${p.path} ${p.message}`).join('; ')}`);
     const published = await maybeOne(db, `select id, version, definition from process_definition where organization_id = $1 and key = $2 and status = 'published'`, [orgId, def.key]);
-    if (published && JSON.stringify(published.definition) === JSON.stringify(def)) continue;
+    if (published && canonical(published.definition) === canonical(def)) continue;
     const { next } = await one(db, `select coalesce(max(version), 0) + 1 as next from process_definition where organization_id = $1 and key = $2`, [orgId, def.key]);
     await query(db, `update process_definition set status = 'retired' where organization_id = $1 and key = $2 and status = 'published'`, [orgId, def.key]);
     await query(

@@ -213,6 +213,58 @@ export const TEMPLATES: Record<string, { name: string; blocks: Block[] }> = {
       { p: 'Avizat pentru legalitate: {people.legal_review.name}', size: 18 },
     ],
   },
+  p8_visit_notice: {
+    name: 'Notificare privind vizita la fața locului',
+    blocks: [
+      { p: '{organization.name}', bold: true },
+      { p: 'Data: {today}', align: 'right' },
+      { p: 'Către: {beneficiary_name}', spaceAfter: 60 },
+      { p: 'Referitor la: proiectul {project_title}, cod SMIS {smis_code}', spaceAfter: 240 },
+      { p: 'NOTIFICARE', bold: true, size: 28, align: 'center' },
+      { p: 'privind efectuarea unei verificări la fața locului', align: 'center', spaceAfter: 240 },
+      {
+        p: 'Vă informăm că în data de **{planned_date}** reprezentanții autorității de management vor efectua o verificare la fața locului, la adresa: {location}.',
+        align: 'both',
+      },
+      {
+        p: 'Vă rugăm să asigurați prezența unui reprezentant împuternicit, accesul la bunurile, lucrările și locurile de desfășurare a activităților proiectului, precum și disponibilitatea documentelor originale (contracte, facturi, procese-verbale de recepție, evidența contabilă a proiectului).',
+        align: 'both',
+      },
+      { p: 'Persoană de contact indicată: {beneficiary_contact}.', spaceAfter: 360 },
+      { p: 'Cu stimă,' },
+      { p: '{people.planning.name}' },
+    ],
+  },
+  p8_visit_report: {
+    name: 'Raport de verificare la fața locului',
+    blocks: [
+      { p: '{organization.name}', bold: true },
+      { p: 'Nr. {raw.reg_onsite_visits_internal}     Data: {today}', align: 'right' },
+      { p: 'RAPORT DE VERIFICARE LA FAȚA LOCULUI', bold: true, size: 28, align: 'center', spaceAfter: 240 },
+      { p: '**Beneficiar:** {beneficiary_name} (CUI {beneficiary.cui})' },
+      { p: '**Proiect:** {project_title}, cod SMIS {smis_code}' },
+      { p: '**Motivul vizitei:** {visit_reason} · **Cererea / dosarul verificat:** {sampled_reference}' },
+      { p: '**Locul verificării:** {location}' },
+      { p: '**Data vizitei:** {visit_date} · **Reprezentantul beneficiarului:** {representative}, {representative_role}', spaceAfter: 240 },
+      { p: '1. Lista de verificare', bold: true },
+      {
+        table: {
+          header: ['Nr.', 'Verificare', 'Răspuns', 'Observații'],
+          row: ['{code}', '{question}', '{answer}', '{observation}'],
+          loop: 'checklist',
+          widths: [600, 5400, 1200, 2400],
+        },
+      },
+      { p: '2. Constatări', bold: true },
+      { p: '{findings}', align: 'both' },
+      { p: '3. Rezultat: {result}', bold: true },
+      { p: '**Recomandări:** {recommendations}', align: 'both' },
+      { p: '**Termen de implementare:** {recommendations_deadline}', spaceAfter: 240 },
+      { p: 'Fotografiile realizate în timpul vizitei (cu data, ora și poziția GPS) și semnătura reprezentantului beneficiarului sunt anexate la prezentul raport.', align: 'both', spaceAfter: 360 },
+      { p: '**Verificare efectuată de:** {people.visit.name}' },
+      { p: '**Avizat:** șef serviciu · **Aprobat:** director' },
+    ],
+  },
   p5_reply_letter: {
     name: 'Răspuns la corespondență',
     blocks: [

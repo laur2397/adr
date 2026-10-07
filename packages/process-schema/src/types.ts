@@ -132,6 +132,8 @@ export interface StepDef {
   fieldAccess?: Record<string, FieldAccess>;
   checklist?: string;
   checklistVerifier?: 'primary' | 'second';
+  /** Photos with time and GPS position, and the representative's signature, can be captured here. */
+  evidence?: boolean;
   deadline?: string;
   paths?: PathDef[];
   branches?: Array<{ to: string; when?: JsonLogic }>;
@@ -157,7 +159,7 @@ export interface ProcessDefinition {
   };
   fields: FieldDef[];
   checklists?: Array<{ key: string; template: string; verifierRoles?: Array<'primary' | 'second'> }>;
-  documents?: Array<{ key: string; template: string; docType: string; pdf?: boolean; signatureLevel?: SignatureLevel }>;
+  documents?: Array<{ key: string; template: string; docType: string; pdf?: boolean; signatureLevel?: SignatureLevel; appendEvidence?: boolean }>;
   deadlines?: Array<{ key: string; definition: string; startsAt?: string; stopsAt?: string[]; when?: JsonLogic }>;
   separationOfDuties?: Array<{ steps: string[]; message: string }>;
   conflictOfInterest?: { steps: string[]; statement?: string };

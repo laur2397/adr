@@ -1,0 +1,540 @@
+{
+  "schemaVersion": 1,
+  "key": "p8_onsite_verification",
+  "name": "Verificare la fața locului",
+  "description": "Pachetul P8: verificarea la fața locului a unei operațiuni (art. 74 alin. 2 din Regulamentul (UE) 2021/1060): programare din eșantion sau la cerere, notificarea beneficiarului, vizita cu listă de verificare, fotografii cu poziție GPS și semnătura reprezentantului, raport avizat și aprobat, urmărirea recomandărilor și, la nevoie, sesizarea unei nereguli.",
+  "subject": {
+    "requires": [
+      "project",
+      "beneficiary"
+    ]
+  },
+  "fields": [
+    {
+      "key": "smis_code",
+      "label": "Cod SMIS",
+      "type": "text",
+      "prefill": {
+        "from": "project",
+        "path": "smis_code"
+      }
+    },
+    {
+      "key": "project_title",
+      "label": "Titlul proiectului",
+      "type": "text",
+      "prefill": {
+        "from": "project",
+        "path": "title"
+      }
+    },
+    {
+      "key": "beneficiary_name",
+      "label": "Beneficiar",
+      "type": "text",
+      "prefill": {
+        "from": "beneficiary",
+        "path": "name"
+      }
+    },
+    {
+      "key": "visit_reason",
+      "label": "Motivul vizitei",
+      "type": "choice",
+      "nomenclature": "visit_reason"
+    },
+    {
+      "key": "sampled_reference",
+      "label": "Cererea / dosarul verificat",
+      "type": "text"
+    },
+    {
+      "key": "planned_date",
+      "label": "Data programată",
+      "type": "date"
+    },
+    {
+      "key": "location",
+      "label": "Locul de implementare (adresa)",
+      "type": "text"
+    },
+    {
+      "key": "beneficiary_contact",
+      "label": "Persoana de contact la beneficiar",
+      "type": "text"
+    },
+    {
+      "key": "visit_date",
+      "label": "Data vizitei",
+      "type": "date"
+    },
+    {
+      "key": "representative",
+      "label": "Reprezentantul beneficiarului prezent",
+      "type": "text"
+    },
+    {
+      "key": "representative_role",
+      "label": "Calitatea reprezentantului",
+      "type": "text"
+    },
+    {
+      "key": "findings",
+      "label": "Constatări",
+      "type": "textarea"
+    },
+    {
+      "key": "result",
+      "label": "Rezultatul verificării",
+      "type": "choice",
+      "nomenclature": "visit_result"
+    },
+    {
+      "key": "recommendations",
+      "label": "Recomandări către beneficiar",
+      "type": "textarea"
+    },
+    {
+      "key": "recommendations_deadline",
+      "label": "Termen de implementare a recomandărilor",
+      "type": "date"
+    },
+    {
+      "key": "follow_up_notes",
+      "label": "Stadiul implementării recomandărilor",
+      "type": "textarea"
+    }
+  ],
+  "checklists": [
+    {
+      "key": "onsite",
+      "template": "p8_onsite",
+      "verifierRoles": [
+        "primary"
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "key": "visit_notice",
+      "template": "p8_visit_notice",
+      "docType": "onsite_visit_notice",
+      "signatureLevel": "qualified"
+    },
+    {
+      "key": "visit_report",
+      "template": "p8_visit_report",
+      "docType": "onsite_visit_report",
+      "signatureLevel": "qualified",
+      "appendEvidence": true
+    }
+  ],
+  "deadlines": [
+    {
+      "key": "report",
+      "definition": "onsite_report",
+      "startsAt": "visit",
+      "stopsAt": [
+        "director_approval"
+      ]
+    },
+    {
+      "key": "follow_up",
+      "definition": "onsite_follow_up",
+      "startsAt": "follow_up",
+      "stopsAt": [
+        "done",
+        "closed_irregularity"
+      ]
+    }
+  ],
+  "separationOfDuties": [
+    {
+      "steps": [
+        "visit",
+        "head_review"
+      ],
+      "message": "Cel care a efectuat vizita nu poate aviza raportul."
+    }
+  ],
+  "steps": [
+    {
+      "key": "planning",
+      "type": "start",
+      "name": "Programarea vizitei",
+      "fieldAccess": {
+        "visit_date": "hidden",
+        "representative": "hidden",
+        "representative_role": "hidden",
+        "findings": "hidden",
+        "result": "hidden",
+        "recommendations": "hidden",
+        "recommendations_deadline": "hidden",
+        "follow_up_notes": "hidden",
+        "visit_reason": "required",
+        "sampled_reference": "editable",
+        "planned_date": "required",
+        "location": "required",
+        "beneficiary_contact": "editable"
+      },
+      "paths": [
+        {
+          "key": "schedule",
+          "label": "Programează și notifică beneficiarul",
+          "to": "notify_visit",
+          "validations": [
+            {
+              "rule": {
+                ">=": [
+                  {
+                    "var": "fields.planned_date"
+                  },
+                  {
+                    "var": "today"
+                  }
+                ]
+              },
+              "message": "Data programată nu poate fi în trecut."
+            }
+          ]
+        },
+        {
+          "key": "cancel",
+          "label": "Renunță la vizită",
+          "to": "cancelled",
+          "kind": "reject",
+          "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "notify_visit",
+      "type": "system",
+      "name": "Notificarea beneficiarului",
+      "onEnter": [
+        {
+          "type": "register",
+          "register": "onsite_visits",
+          "direction": "internal",
+          "once": true
+        },
+        {
+          "type": "generate_document",
+          "document": "visit_notice"
+        },
+        {
+          "type": "register",
+          "register": "general",
+          "direction": "out",
+          "document": "visit_notice"
+        },
+        {
+          "type": "notify",
+          "to": "beneficiary_email",
+          "template": "p8_visit_notice_email",
+          "attach": [
+            "visit_notice"
+          ]
+        }
+      ],
+      "next": "visit"
+    },
+    {
+      "key": "visit",
+      "type": "human",
+      "name": "Vizita la fața locului",
+      "assignment": {
+        "rule": "project_expert",
+        "role": "ei_expert"
+      },
+      "deadline": "report",
+      "checklist": "onsite",
+      "checklistVerifier": "primary",
+      "evidence": true,
+      "fieldAccess": {
+        "visit_reason": "visible",
+        "planned_date": "visible",
+        "location": "visible",
+        "beneficiary_contact": "visible",
+        "sampled_reference": "visible",
+        "visit_date": "required",
+        "representative": "required",
+        "representative_role": "editable",
+        "findings": "required",
+        "result": "required",
+        "recommendations": "editable",
+        "recommendations_deadline": "editable",
+        "follow_up_notes": "hidden"
+      },
+      "paths": [
+        {
+          "key": "submit",
+          "label": "Trimite raportul la avizare",
+          "to": "head_review",
+          "requiresSignatures": [
+            "visit_report"
+          ],
+          "validations": [
+            {
+              "rule": {
+                ">=": [
+                  {
+                    "var": "evidence.photos"
+                  },
+                  1
+                ]
+              },
+              "message": "Atașați cel puțin o fotografie de la locul implementării."
+            },
+            {
+              "rule": {
+                "==": [
+                  {
+                    "var": "evidence.signature"
+                  },
+                  true
+                ]
+              },
+              "message": "Lipsește semnătura reprezentantului beneficiarului."
+            },
+            {
+              "rule": {
+                "or": [
+                  {
+                    "==": [
+                      {
+                        "var": "fields.result"
+                      },
+                      "conform"
+                    ]
+                  },
+                  {
+                    "!!": {
+                      "var": "fields.recommendations"
+                    }
+                  }
+                ]
+              },
+              "message": "Formulați recomandările către beneficiar."
+            },
+            {
+              "rule": {
+                "or": [
+                  {
+                    "!=": [
+                      {
+                        "var": "fields.result"
+                      },
+                      "conform_cu_recomandari"
+                    ]
+                  },
+                  {
+                    "!!": {
+                      "var": "fields.recommendations_deadline"
+                    }
+                  }
+                ]
+              },
+              "message": "Stabiliți termenul de implementare a recomandărilor."
+            }
+          ],
+          "requiresChecklistComplete": "onsite"
+        },
+        {
+          "key": "reschedule",
+          "label": "Vizita nu a putut avea loc – reprogramează",
+          "to": "planning",
+          "kind": "return",
+          "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "head_review",
+      "type": "human",
+      "name": "Avizare șef serviciu",
+      "assignment": {
+        "rule": "department_head",
+        "step": "visit"
+      },
+      "paths": [
+        {
+          "key": "endorse",
+          "label": "Avizează",
+          "to": "director_approval",
+          "requiresSignatures": [
+            "visit_report"
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează la expert",
+          "to": "visit",
+          "kind": "return",
+          "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "director_approval",
+      "type": "human",
+      "name": "Aprobare director",
+      "assignment": {
+        "rule": "role_queue",
+        "role": "director"
+      },
+      "paths": [
+        {
+          "key": "approve",
+          "label": "Aprobă raportul",
+          "to": "communicate",
+          "requiresSignatures": [
+            "visit_report"
+          ]
+        },
+        {
+          "key": "return",
+          "label": "Returnează",
+          "to": "head_review",
+          "kind": "return",
+          "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "communicate",
+      "type": "system",
+      "name": "Comunicarea raportului",
+      "onEnter": [
+        {
+          "type": "register",
+          "register": "general",
+          "direction": "out",
+          "document": "visit_report"
+        },
+        {
+          "type": "notify",
+          "to": "beneficiary_email",
+          "template": "p8_visit_report_email",
+          "attach": [
+            "visit_report"
+          ]
+        }
+      ],
+      "next": "route_result"
+    },
+    {
+      "key": "route_result",
+      "type": "decision",
+      "name": "Rezultatul vizitei",
+      "paths": [
+        {
+          "key": "ok",
+          "label": "Conform",
+          "to": "done",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.result"
+              },
+              "conform"
+            ]
+          }
+        },
+        {
+          "key": "recommendations",
+          "label": "Cu recomandări",
+          "to": "follow_up",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.result"
+              },
+              "conform_cu_recomandari"
+            ]
+          }
+        },
+        {
+          "key": "nonconform",
+          "label": "Neconform",
+          "to": "report_irregularity",
+          "visibleWhen": {
+            "==": [
+              {
+                "var": "fields.result"
+              },
+              "neconform"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "follow_up",
+      "type": "human",
+      "name": "Urmărirea recomandărilor",
+      "assignment": {
+        "rule": "previous_actor",
+        "step": "visit",
+        "role": "ei_expert"
+      },
+      "deadline": "follow_up",
+      "fieldAccess": {
+        "follow_up_notes": "required",
+        "recommendations": "visible",
+        "recommendations_deadline": "visible"
+      },
+      "paths": [
+        {
+          "key": "implemented",
+          "label": "Recomandări implementate – închide",
+          "to": "done"
+        },
+        {
+          "key": "not_implemented",
+          "label": "Recomandări neimplementate – sesizează nereguli",
+          "to": "report_irregularity",
+          "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "report_irregularity",
+      "type": "system",
+      "name": "Sesizare către nereguli",
+      "onEnter": [
+        {
+          "type": "start_subflow",
+          "subflow": "p4_irregularities",
+          "inputs": {
+            "source": "=vizita",
+            "suspicion": "findings"
+          }
+        }
+      ],
+      "next": "closed_irregularity"
+    },
+    {
+      "key": "done",
+      "type": "end_positive",
+      "name": "Finalizat"
+    },
+    {
+      "key": "closed_irregularity",
+      "type": "end_positive",
+      "name": "Finalizat – sesizare nereguli"
+    },
+    {
+      "key": "cancelled",
+      "type": "end_negative",
+      "name": "Anulat"
+    }
+  ],
+  "conflictOfInterest": {
+    "steps": [
+      "visit",
+      "head_review",
+      "director_approval"
+    ]
+  }
+}

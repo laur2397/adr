@@ -22,6 +22,7 @@ import { notifyUsers, usersWithRole } from '../notifications/service.js';
 import { createEntry, lastEntryForInstance, upsertCorrespondent } from '../registry/service.js';
 import { invalidateSignaturesSince } from '../signing/invalidate.js';
 import { assertCoiDeclared } from '../controls/coi.js';
+import { evidenceCounts } from '../visits/evidence.js';
 import { loadInstance, type InstanceContext } from './load.js';
 import { actingAs, type TaskRow } from './tasks.js';
 
@@ -720,7 +721,14 @@ export async function transition(db: Db, user: CurrentUser, input: TransitionInp
 
   if (kind === 'forward') {
     const { values } = await loadFields(db, ctx.instance.id);
-    const data = { fields: values, project: ctx.project, beneficiary: ctx.beneficiary, instance: ctx.instance };
+    const data = {
+      fields: values,
+      project: ctx.project,
+      beneficiary: ctx.beneficiary,
+      instance: ctx.instance,
+      today: today(),
+      evidence: step.evidence ? await evidenceCounts(db, ctx.instance.id) : { photos: 0, signature: false },
+    };
     if (path.validateFields !== false) errors.push(...validateForStep(ctx.def, step.key, data));
     for (const v of path.validations ?? []) if (!truthy(v.rule, data)) errors.push({ message: v.message });
     if (path.requiresChecklistComplete) {

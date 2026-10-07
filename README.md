@@ -19,7 +19,12 @@ furnizorului calificat. Detalii: [docs/faza-1/04-stare-implementare.md](docs/faz
 ## Ce face
 
 - **Circuite gata configurate**: P1 verificarea cererii de rambursare / plată / prefinanțare,
-  P2 verificarea dosarului de achiziție, P5 registratură generală și corespondență (petiții, Legea 544).
+  P2 verificarea dosarului de achiziție, P3 acte adiționale, P4 nereguli și debitori, P5 registratură
+  generală și corespondență (petiții, Legea 544), P6 referat de necesitate și plată cu viză CFPP,
+  P7 decizii, P8 verificare la fața locului.
+- **Vizite pe teren**: programare din eșantionul pe bază de risc, pagină pentru telefon cu listă de
+  verificare, fotografii cu poziție GPS, semnătura reprezentantului pe ecran și lucru fără semnal;
+  raportul are fotografiile în anexă, iar o vizită neconformă deschide automat dosarul de nereguli.
 - **Dosarul**: bara circuitului, sarcina curentă cu acțiunile posibile, formular precompletat din
   proiect, beneficiar (ANAF) și dosarul anterior, tabel de cheltuieli cu sume exacte, listă de
   verificare (inclusiv dubla verificare EVF + EI), documente generate DOCX/PDF, semnături în ordine,

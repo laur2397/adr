@@ -13,6 +13,7 @@ import { setTodayOverride, today } from '../core/config.js';
 import { getPool, query } from '../core/db.js';
 import { scanDeadlines } from '../deadlines/service.js';
 import { withControlDigit } from './demo.js';
+import { demoPhoto, demoSignature } from './images.js';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -97,6 +98,20 @@ class As {
     return this.call('POST', `/instances/${instanceId}/transitions`, { taskId: t.id, path, ...extra });
   }
 
+  /** Photo or signature, sent the way the field page sends it (multipart). */
+  async upload(instanceId: string, file: Buffer, meta: Record<string, string>) {
+    const boundary = `----flux${Math.random().toString(16).slice(2)}`;
+    const parts: Buffer[] = Object.entries(meta).map(([k, v]) => Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}\r\n`));
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="foto.png"\r\nContent-Type: image/png\r\n\r\n`), file, Buffer.from(`\r\n--${boundary}--\r\n`));
+    const r = await this.app.inject({
+      method: 'POST',
+      url: `/api/v1/instances/${instanceId}/evidence`,
+      payload: Buffer.concat(parts),
+      headers: { cookie: this.cookie, 'x-flux-csrf': '1', 'content-type': `multipart/form-data; boundary=${boundary}` },
+    });
+    if (r.statusCode >= 300) throw new Error(`${this.username} upload: ${r.statusCode} ${r.body.slice(0, 300)}`);
+  }
+
   async comment(instanceId: string, body: string) {
     return this.call('POST', `/instances/${instanceId}/comments`, { body }, true);
   }
@@ -138,6 +153,8 @@ const TABLE_TIMES: Array<[string, string[]]> = [
   ['job_outbox', ['created_at', 'run_after', 'dispatched_at']],
   ['mail_message', ['created_at', 'processed_at']],
   ['sampling_plan', ['created_at']],
+  ['sampling_visit', ['created_at']],
+  ['visit_evidence', ['created_at']],
   ['substitution', ['created_at']],
   ['audit_event', ['occurred_at']],
 ];
@@ -348,14 +365,14 @@ async function* p2(w: World, start: number, opts: { correction: boolean; project
   }
 }
 
-async function* p4Continue(w: World, id: string, start: number, confirmed: boolean): Scenario {
+async function* p4Continue(w: World, id: string, start: number, confirmed: boolean, custom?: { irregularity_type: string; finding: string }): Scenario {
   const { as } = w;
   yield { day: start, hour: 10 };
   await as.nereguli!.go(id, 'registration', 'register');
   yield { day: start + 8, hour: 14 };
   const principal = money(15000 + w.rnd() * 220000);
   await as.nereguli!.fields(id, 'assessment', confirmed
-    ? { irregularity_type: 'achizitii', finding: 'Se confirmă neregula: specificații restrictive care au limitat concurența. Se aplică o corecție financiară de 10% din valoarea contractului (HG 519/2014, anexa, pct. 2.4).', legal_basis: 'OUG 66/2011, art. 6 și HG 519/2014', debt_principal: principal, debt_due_date: toIso(dateOf(start + 40)), outcome: 'confirmata', ims_report: Number(principal) > 49700 }
+    ? { irregularity_type: 'achizitii', finding: 'Se confirmă neregula: specificații restrictive care au limitat concurența. Se aplică o corecție financiară de 10% din valoarea contractului (HG 519/2014, anexa, pct. 2.4).', ...custom, legal_basis: custom ? 'OUG 66/2011, art. 2 și art. 6' : 'OUG 66/2011, art. 6 și HG 519/2014', debt_principal: principal, debt_due_date: toIso(dateOf(start + 40)), outcome: 'confirmata', ims_report: Number(principal) > 49700 }
     : { finding: 'Din verificarea documentelor nu rezultă o abatere de la legislație. Suspiciunea nu se confirmă.', outcome: 'neconfirmata' });
   await as.nereguli!.sign(id, 'finding_report');
   await as.nereguli!.go(id, 'assessment', confirmed ? 'irregularity' : 'no_irregularity');
@@ -564,6 +581,89 @@ async function* p7(w: World, start: number, idx: number, finish: boolean): Scena
   await as.director!.go(id, 'director_signature', 'sign');
 }
 
+const VISIT_PLACES: Array<[string, number, number]> = [
+  ['Str. Fabricii 12, Iași (hala de producție)', 47.1585, 27.6014],
+  ['Str. Școlii 3, comuna Exemplu, jud. Timiș', 45.7489, 21.2087],
+  ['Bd. Revoluției 40, Arad (sediul firmei)', 46.1866, 21.3123],
+  ['Zona industrială Vest, Oradea, lot 7', 47.0465, 21.9189],
+  ['Str. Laboratorului 5, Cluj-Napoca', 46.7712, 23.6236],
+  ['Piața Centrală 1, Sibiu (clădirea restaurată)', 45.7983, 24.1256],
+  ['Str. Energiei 2, Brașov (parcul fotovoltaic)', 45.6427, 25.5887],
+  ['Str. Meseriilor 9, Suceava (centrul de formare)', 47.6514, 26.2556],
+  ['Calea Severinului 21, Craiova', 44.3302, 23.7949],
+];
+
+/**
+ * P8: an on-site verification with photos (time, GPS) and the representative's signature.
+ * outcome: 'conform' closes; 'recommendations' is followed up; 'nonconform' opens an irregularity.
+ */
+async function* p8(w: World, start: number, opts: { projectIdx: number; outcome: 'conform' | 'recommendations' | 'nonconform'; reason: string }): Scenario {
+  const { as } = w;
+  const project = w.projects[opts.projectIdx % w.projects.length]!;
+  const [place, lat0, lon0] = VISIT_PLACES[opts.projectIdx % VISIT_PLACES.length]!;
+  yield { day: start, hour: 9 };
+  const { id } = await as['sef.sm']!.call('POST', '/instances', { definitionKey: 'p8_onsite_verification', projectId: project.id });
+  await as['sef.sm']!.fields(id, 'planning', { visit_reason: opts.reason, planned_date: toIso(dateOf(start + 6)), location: place, beneficiary_contact: 'reprezentantul legal al beneficiarului' });
+  await as['sef.sm']!.go(id, 'planning', 'schedule');
+  yield { day: start + 6, hour: 11 };
+  const visitDay = toIso(dateOf(start + 6));
+  const nonconform = opts.outcome === 'nonconform';
+  await as.ei1!.checklist(id, 'visit', 'onsite', Array.from({ length: 12 }, (_, i) => {
+    const code = String(i + 1);
+    if (opts.outcome === 'recommendations' && code === '9') return { code, answer: 'NU', observation: 'Panoul permanent de informare nu este montat la intrarea în obiectiv.' };
+    if (nonconform && code === '2') return { code, answer: 'NU', observation: 'Unul dintre echipamentele decontate nu se află la locația declarată.' };
+    if (nonconform && code === '3') return { code, answer: 'NU', observation: 'Seria echipamentului prezentat diferă de cea din factură și din procesul-verbal de recepție.' };
+    return { code, answer: 'DA' };
+  }));
+  const findings = {
+    conform: 'Bunurile și lucrările decontate există, sunt funcționale și corespund documentelor. Documentele originale și evidența contabilă distinctă au fost prezentate. Măsurile de publicitate sunt respectate.',
+    recommendations: 'Bunurile decontate sunt instalate și funcționale la adresa declarată. Panoul permanent de informare și publicitate nu este montat; există doar autocolante pe echipamente.',
+    nonconform: 'Centrul de prelucrare decontat prin cererea de rambursare nu se află la locația declarată; echipamentul prezentat are altă serie decât cea din factură. Se sesizează Serviciul Nereguli.',
+  }[opts.outcome];
+  await as.ei1!.fields(id, 'visit', {
+    visit_date: visitDay,
+    representative: w.pick(['Ion Popescu', 'Maria Ionescu', 'Andrei Georgescu', 'Elena Dobre', 'Mihai Stoica']),
+    representative_role: w.pick(['administrator', 'manager de proiect', 'reprezentant legal']),
+    findings,
+    result: opts.outcome === 'conform' ? 'conform' : opts.outcome === 'recommendations' ? 'conform_cu_recomandari' : 'neconform',
+    ...(opts.outcome === 'conform' ? {} : { recommendations: nonconform ? 'Prezentarea echipamentului decontat și a documentelor de transfer.' : 'Montarea panoului permanent de informare, conform Manualului de identitate vizuală.', recommendations_deadline: toIso(dateOf(start + 36)) }),
+  });
+  const shots: Array<['building' | 'equipment' | 'panel' | 'works', string]> = [
+    ['building', 'Vedere generală a obiectivului'],
+    ['equipment', nonconform ? 'Echipamentul prezentat (altă serie decât în factură)' : 'Echipamentul achiziționat, cu plăcuța de identificare'],
+    ['panel', opts.outcome === 'recommendations' ? 'Locul unde trebuia montat panoul de informare' : 'Panoul de informare și publicitate'],
+  ];
+  for (const [i, [kind, caption]] of shots.entries()) {
+    const takenAt = new Date(`${visitDay}T${String(7 + i).padStart(2, '0')}:${String(10 + i * 7).padStart(2, '0')}:00Z`).toISOString();
+    await as.ei1!.upload(id, demoPhoto(kind, opts.projectIdx * 10 + i, 960, 720), {
+      kind: 'photo', clientId: `sim-${id}-${i}`, caption, takenAt,
+      latitude: (lat0 + (w.rnd() - 0.5) * 0.0008).toFixed(6), longitude: (lon0 + (w.rnd() - 0.5) * 0.0008).toFixed(6), accuracy: String(4 + Math.floor(w.rnd() * 12)),
+    });
+  }
+  const d = await as.ei1!.call('GET', `/instances/${id}`);
+  await as.ei1!.upload(id, demoSignature(opts.projectIdx + 3), {
+    kind: 'signature', clientId: `sim-${id}-sig`, signerName: d.fields.find((f: any) => f.key === 'representative').value,
+    takenAt: new Date(`${visitDay}T09:40:00Z`).toISOString(), latitude: lat0.toFixed(6), longitude: lon0.toFixed(6), accuracy: '6',
+  });
+  yield { day: start + 8, hour: 15 };
+  await as.ei1!.sign(id, 'visit_report');
+  await as.ei1!.go(id, 'visit', 'submit');
+  yield { day: start + 10, hour: 10 };
+  await as['sef.sm']!.sign(id, 'visit_report');
+  await as['sef.sm']!.go(id, 'head_review', 'endorse');
+  yield { day: start + 12, hour: 14 };
+  await as.director!.sign(id, 'visit_report');
+  await as.director!.go(id, 'director_approval', 'approve');
+  if (opts.outcome === 'recommendations') {
+    yield { day: start + 30, hour: 11 };
+    await as.ei1!.fields(id, 'follow_up', { follow_up_notes: 'Beneficiarul a transmis fotografii cu panoul permanent montat; recomandarea este implementată.' });
+    await as.ei1!.go(id, 'follow_up', 'implemented');
+  } else if (nonconform) {
+    const child = await query(getPool(), `select id from instance where parent_instance_id = $1`, [id]);
+    if (child[0]) yield* p4Continue(w, child[0].id, start + 14, true, { irregularity_type: 'cheltuieli_neeligibile', finding: 'Se confirmă neregula constatată la vizita la fața locului: echipamentul decontat nu se află în operațiune. Cheltuiala aferentă devine neeligibilă și se recuperează.' });
+  }
+}
+
 /** Runs only the first n segments of a scenario: the dossier then waits at that step. */
 async function* limit(gen: Scenario, n: number): Scenario {
   let count = 0;
@@ -645,6 +745,17 @@ export async function simulate(options: { password: string; days?: number; log?:
   for (let i = 0; i < 14; i++) scenarios.push(p5(w, at(0.03 + i * 0.07), i, answerers[i % answerers.length]!, ![4, 9, 12].includes(i)));
   [[0.08, 'ei1', 3], [0.27, 'evf2', 3], [0.48, 'nereguli', 3], [0.66, 'achizitii1', 2], [0.82, 'evf1', 1], [0.94, 'ei1', 0]].forEach(([f, d, depth]) => scenarios.push(p6(w, at(f as number), d as string, depth as number)));
   [[0.1, 0, true], [0.42, 1, true], [0.63, 2, true], [0.88, 3, true], [0.97, 4, false]].forEach(([f, i, fin]) => scenarios.push(p7(w, at(f as number), i as number, fin as boolean)));
+  // On-site verifications: finished ones of each outcome, and some still at the head, the director, or in follow-up.
+  scenarios.push(
+    p8(w, at(0.12), { projectIdx: 1, outcome: 'conform', reason: 'esantion_aleator' }),
+    p8(w, at(0.28), { projectIdx: 4, outcome: 'recommendations', reason: 'esantion_risc' }),
+    p8(w, at(0.41), { projectIdx: 2, outcome: 'nonconform', reason: 'esantion_risc' }),
+    p8(w, at(0.58), { projectIdx: 6, outcome: 'conform', reason: 'cerere_finala' }),
+    p8(w, at(0.7), { projectIdx: 8, outcome: 'recommendations', reason: 'monitorizare' }),
+    limit(p8(w, at(0.8), { projectIdx: 3, outcome: 'recommendations', reason: 'esantion_risc' }), 5), // in follow-up today
+    limit(p8(w, at(0.89), { projectIdx: 5, outcome: 'conform', reason: 'esantion_aleator' }), 4), // at the director
+    limit(p8(w, at(0.92), { projectIdx: 7, outcome: 'conform', reason: 'suspiciune' }), 2), // report waiting to be sent
+  );
 
   // Scheduler: run the dossier whose next action is earliest; stop dossiers whose next action is in the future.
   const queue: Array<{ gen: Scenario; when: Date }> = [];
@@ -722,7 +833,16 @@ async function extras(w: World, now: Date) {
     await storeIncomingMail(getPool(), org[0]!.id, raw);
   }
   // Risk-based sampling plan for on-the-spot checks.
-  await as.director!.call('POST', '/sampling', { name: 'Verificări la fața locului – trimestrul curent', definitionKey: 'p1_payment_request_check', method: 'risk_weighted', percent: 30, threshold: 60, seed: 'demo-2026-t4' }, true);
+  const plan = await as.director!.call('POST', '/sampling', { name: 'Verificări la fața locului – trimestrul curent', definitionKey: 'p1_payment_request_check', method: 'risk_weighted', percent: 30, threshold: 60, seed: 'demo-2026-t4' }, true);
+  // The head of the monitoring unit opens the visits of the sample and schedules the first two.
+  if (plan?.id) {
+    const visits = await as['sef.sm']!.call('POST', `/sampling/${plan.id}/visits`, undefined, true);
+    for (const [i, v] of (visits?.created ?? []).slice(0, 2).entries()) {
+      const [place] = VISIT_PLACES[(i + 2) % VISIT_PLACES.length]!;
+      await as['sef.sm']!.fields(v.visitId, 'planning', { planned_date: new Date(now.getTime() + (3 + i * 4) * 86_400_000).toISOString().slice(0, 10), location: place, beneficiary_contact: 'administratorul societății' });
+      await as['sef.sm']!.go(v.visitId, 'planning', 'schedule');
+    }
+  }
   // Substitution: evf1 is on leave this week, evf2 handles the tasks.
   const ids = await query(getPool(), `select id, username from app_user where username in ('evf1', 'evf2')`);
   const id = (u: string) => ids.find((x) => x.username === u)!.id;

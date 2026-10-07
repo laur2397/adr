@@ -23,7 +23,7 @@ fila **PORTS** și apăsați pe globul de lângă **Flux AM (3000)**.
 | `admin` | Administrator funcțional (vede toate dosarele) |
 
 **Pentru a vedea tot ce au lucrat ceilalți:** intrați ca `director` (Panoul meu cu documente de semnat,
-Dosare – toate, Tablou de bord, Nereguli, Debitori, Eșantionare, Arhivă) sau ca `admin` (în plus
+Dosare – toate, Tablou de bord, Nereguli, Debitori, Eșantionare, Vizite pe teren, Arhivă) sau ca `admin` (în plus
 Administrare: utilizatori, termene, procese cu diagrama fluxului, audit, integrări).
 
 **Codespace creat înainte de actualizare?** În terminal rulați `bash .devcontainer/reset-demo.sh`
@@ -32,6 +32,13 @@ Administrare: utilizatori, termene, procese cu diagrama fluxului, audit, integr�
 **Încercați:** `registratura` → Dosar nou → „Verificarea cererii de rambursare” → proiectul 302145 →
 completați numărul, tipul și data → Înregistrează. Apoi `evf1` → cheltuieli, constatări, listă de
 verificare → Documente → Semnează → Trimite. Apoi `sef.svf` și `director`.
+
+**Vizită pe teren (pe telefon):** `ei1` → Vizite pe teren → „Pe teren” la o vizită programată (sau
+deschideți pe telefon adresa portului 3000 + `/teren/...`). Completați declarația, preluați vizita,
+bifați lista, faceți fotografii (cu poziție GPS), semnătura reprezentantului pe ecran, apoi
+„Semnează raportul și trimite la avizare”. Pagina merge și fără semnal: modificările se trimit când
+revine conexiunea. Pentru programare din eșantion: `sef.sm` → Eșantionare → planul salvat →
+„Programează vizitele”.
 
 Date fictive, semnături **simulate** (fără valoare juridică), ANAF simulat.
 

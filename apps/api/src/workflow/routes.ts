@@ -197,6 +197,7 @@ export async function workflowRoutes(app: FastifyInstance) {
         onBehalfOf: acting.ok ? acting.onBehalfOf : null,
         checklist: step.checklist ?? null,
         checklistVerifier: step.checklistVerifier ?? null,
+        evidence: Boolean(step.evidence),
         assignmentNext: null,
         paths: acting.ok
           ? (await visiblePaths(pool, ctx, t as TaskRow, user)).map((p) => ({

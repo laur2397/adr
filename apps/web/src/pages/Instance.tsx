@@ -5,12 +5,13 @@ import { api, ApiError, can } from '../api';
 import { FieldInput, type FieldView } from '../components/fields';
 import { AuditPanel, ChecklistPanel, DeadlinesPanel, DocumentsPanel, HistoryPanel, RegistrationsPanel } from '../components/InstancePanels';
 import { CoiBanner, CommentsPanel, DoubleFundingAlerts } from '../components/Collaboration';
+import { EvidencePanel } from '../components/Evidence';
 import { ProcessDiagram } from '../components/ProcessDiagram';
 import { LineItems } from '../components/LineItems';
 import { Card, ErrorAlert, Loading, Modal, StatusBadge, useMe } from '../components/ui';
 import { fmtAmount, fmtDate, fmtDateTime } from '../format';
 
-type Tab = 'form' | 'checklist' | 'documents' | 'comments' | 'flow' | 'deadlines' | 'history' | 'registers' | 'audit';
+type Tab = 'form' | 'checklist' | 'visit' | 'documents' | 'comments' | 'flow' | 'deadlines' | 'history' | 'registers' | 'audit';
 
 function Circuit({ steps }: { steps: any[] }) {
   return (
@@ -217,6 +218,7 @@ export function InstancePage() {
   const tabs: Array<[Tab, string, boolean]> = [
     ['form', 'Formular', true],
     ['checklist', 'Listă de verificare', instance.checklists.length > 0],
+    ['visit', 'Fotografii și semnătură', instance.definition.key === 'p8_onsite_verification'],
     ['documents', `Documente (${instance.documents.length})`, true],
     ['comments', 'Comentarii', true],
     ['flow', 'Flux', true],
@@ -275,6 +277,14 @@ export function InstancePage() {
       <DoubleFundingAlerts items={instance.doubleFunding} />
       {task && instance.status === 'active' && <CoiBanner instanceId={instance.id} coi={instance.coi} />}
       {task && instance.status === 'active' && <ActionPanel instance={instance} task={task} />}
+      {task?.evidence && instance.status === 'active' && (
+        <div className="alert info row" style={{ justifyContent: 'space-between' }}>
+          <span>La beneficiar folosiți modul de teren: listă de verificare, fotografii cu GPS și semnătura reprezentantului, chiar și fără semnal.</span>
+          <Link className="button primary small" to={`/teren/${instance.id}`}>
+            Deschide modul de teren
+          </Link>
+        </div>
+      )}
       {!task && instance.status === 'active' && others.length > 0 && (
         <div className="alert info">
           Dosarul este la: {others.map((t: any) => `${t.name} (${t.assignee ?? `coada ${t.queue}`})`).join('; ')}.
@@ -298,6 +308,7 @@ export function InstancePage() {
             ))}
           </div>
         )}
+        {tab === 'visit' && <EvidencePanel instanceId={instance.id} fieldLink={Boolean(task?.evidence)} />}
         {tab === 'documents' && <DocumentsPanel instance={instance} signable={signable} canEdit={Boolean(task)} />}
         {tab === 'comments' && <CommentsPanel instanceId={instance.id} />}
         {tab === 'flow' && (

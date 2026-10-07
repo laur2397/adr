@@ -1,0 +1,73 @@
+{
+  "key": "p8_onsite",
+  "name": "Lista de verificare la fața locului",
+  "answerSet": [
+    "DA",
+    "NU",
+    "NA"
+  ],
+  "note": "Lista implicită; se înlocuiește cu lista din manualul de proceduri al AM.",
+  "items": [
+    {
+      "code": "1",
+      "question": "Operațiunea se desfășoară la adresa declarată în contractul de finanțare?"
+    },
+    {
+      "code": "2",
+      "question": "Bunurile achiziționate există fizic, sunt instalate și funcționale?",
+      "observationRequiredOn": [
+        "NU",
+        "NA"
+      ]
+    },
+    {
+      "code": "3",
+      "question": "Bunurile corespund ca tip, cantitate și caracteristici facturilor și proceselor-verbale de recepție?",
+      "observationRequiredOn": [
+        "NU"
+      ]
+    },
+    {
+      "code": "4",
+      "question": "Seriile / numerele de inventar ale echipamentelor corespund documentelor?"
+    },
+    {
+      "code": "5",
+      "question": "Lucrările executate corespund situațiilor de lucrări decontate?",
+      "observationRequiredOn": [
+        "NU"
+      ]
+    },
+    {
+      "code": "6",
+      "question": "Activitățile se desfășoară conform graficului din contract și raportului de progres?"
+    },
+    {
+      "code": "7",
+      "question": "Documentele originale sunt disponibile la sediul beneficiarului?"
+    },
+    {
+      "code": "8",
+      "question": "Beneficiarul ține o evidență contabilă distinctă a operațiunii?"
+    },
+    {
+      "code": "9",
+      "question": "Sunt respectate măsurile de informare și publicitate (panou, plăcuță, autocolante)?",
+      "observationRequiredOn": [
+        "NU"
+      ]
+    },
+    {
+      "code": "10",
+      "question": "Indicatorii de realizare raportați pot fi confirmați la fața locului?"
+    },
+    {
+      "code": "11",
+      "question": "Bunurile nu sunt folosite în alte scopuri decât cele ale proiectului?"
+    },
+    {
+      "code": "12",
+      "question": "Sunt respectate principiile orizontale (egalitate de șanse, mediu, accesibilitate)?"
+    }
+  ]
+}

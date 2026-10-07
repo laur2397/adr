@@ -112,6 +112,10 @@
           },
           "signatureLevel": {
             "$ref": "#/$defs/signatureLevel"
+          },
+          "appendEvidence": {
+            "type": "boolean",
+            "description": "Append the dossier's on-site photos and the representative's signature to the generated document."
           }
         }
       }
@@ -791,6 +795,10 @@
             "type": "string"
           },
           "description": "subflow: parent field key -> child field key (or $status) copied when the child ends"
+        },
+        "evidence": {
+          "type": "boolean",
+          "description": "Photos (with time and GPS position) and the beneficiary representative's signature can be captured at this step."
         }
       },
       "allOf": [
