@@ -177,6 +177,8 @@ export async function controlRoutes(app: FastifyInstance) {
       `select i.id, i.title, i.reference_no, i.status, i.started_at, p.smis_code, b.name as beneficiary_name,
               max(case when f.field_key = 'outcome' then f.value #>> '{}' end) as outcome,
               max(case when f.field_key = 'irregularity_type' then f.value #>> '{}' end) as irregularity_type,
+              max(case when f.field_key = 'irregularity_type' then (select ni.label from nomenclature n join nomenclature_item ni on ni.nomenclature_id = n.id
+                                                                    where n.organization_id = i.organization_id and n.key = 'irregularity_type' and ni.code = f.value #>> '{}') end) as irregularity_type_label,
               max(case when f.field_key = 'debt_principal' then f.value #>> '{}' end) as debt_principal,
               max(case when f.field_key = 'affected_amount' then f.value #>> '{}' end) as affected_amount,
               max(case when f.field_key = 'ims_report' then f.value #>> '{}' end) as ims_report,
@@ -185,7 +187,7 @@ export async function controlRoutes(app: FastifyInstance) {
          left join instance_field f on f.instance_id = i.id
          left join project p on p.id = i.project_id left join beneficiary b on b.id = i.beneficiary_id
         where i.organization_id = $1 and d.key = 'p4_irregularities'
-        group by i.id, p.smis_code, b.name order by i.started_at desc`,
+        group by i.id, i.organization_id, p.smis_code, b.name order by i.started_at desc`,
       [user.organizationId],
     );
     return {

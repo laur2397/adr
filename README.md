@@ -14,7 +14,7 @@ corespondență), documente generate din șabloane, semnare electronică, termen
 **Stare:** Faza 1 (MVP) implementată și testată, cu semnătură simulată până la alegerea
 furnizorului calificat. Detalii: [docs/faza-1/04-stare-implementare.md](docs/faza-1/04-stare-implementare.md).
 
-**Documentație tehnică completă:** [docs/DOCUMENTATIE-TEHNICA.md](docs/DOCUMENTATIE-TEHNICA.md).
+**Documentație:** [manual ilustrat cu capturi de ecran](docs/manual/MANUAL-ILUSTRAT.md), [documentație tehnică](docs/DOCUMENTATIE-TEHNICA.md), ambele într-un singur PDF: [docs/Flux-AM-documentatie-completa.pdf](docs/Flux-AM-documentatie-completa.pdf).
 
 ## Ce face
 

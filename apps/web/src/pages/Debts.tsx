@@ -259,7 +259,7 @@ export function Irregularities() {
                     {i.beneficiary_name}
                     <div className="small muted">SMIS {i.smis_code}</div>
                   </td>
-                  <td>{i.irregularity_type ?? '—'}</td>
+                  <td>{i.irregularity_type_label ?? i.irregularity_type ?? '—'}</td>
                   <td>{i.outcome === 'confirmata' ? <Badge tone="red">confirmată</Badge> : i.outcome === 'neconfirmata' ? <Badge tone="green">neconfirmată</Badge> : <Badge>în verificare</Badge>}</td>
                   <td className="num">{fmtAmount(i.debt_principal ?? i.affected_amount)}</td>
                   <td className="num">{i.amount_eur ? i.amount_eur.toLocaleString('ro-RO', { minimumFractionDigits: 2 }) : ''}</td>

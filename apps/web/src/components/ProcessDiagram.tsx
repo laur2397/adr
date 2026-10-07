@@ -20,7 +20,7 @@ interface Edge {
 
 const W = 168;
 const H = 54;
-const GAP_X = 70;
+const GAP_X = 110;
 const GAP_Y = 26;
 
 function edgesOf(steps: FlowStep[]): Edge[] {
@@ -33,19 +33,40 @@ function edgesOf(steps: FlowStep[]): Edge[] {
   return out;
 }
 
-function layout(steps: FlowStep[], edges: Edge[]) {
+/** Edges that close a cycle (target is an ancestor in a depth-first walk from the start). */
+function cycleEdges(steps: FlowStep[], edges: Edge[]): Set<Edge> {
+  const out = new Set<Edge>();
+  const start = steps.find((s) => s.type === 'start') ?? steps[0];
+  if (!start) return out;
+  const onStack = new Set<string>();
+  const seen = new Set<string>();
+  const visit = (key: string) => {
+    seen.add(key);
+    onStack.add(key);
+    for (const e of edges) {
+      if (e.from !== key || e.kind === 'return') continue;
+      if (onStack.has(e.to)) out.add(e);
+      else if (!seen.has(e.to)) visit(e.to);
+    }
+    onStack.delete(key);
+  };
+  visit(start.key);
+  return out;
+}
+
+function layout(steps: FlowStep[], edges: Edge[], back: Set<Edge>) {
   const level = new Map<string, number>();
   const start = steps.find((s) => s.type === 'start') ?? steps[0];
   if (!start) return { pos: new Map<string, { x: number; y: number }>(), width: 0, height: 0 };
-  // Longest-path levels over forward edges (returns ignored), bounded to avoid cycles.
+  // Longest-path levels over the acyclic forward edges (returns and cycle-closing edges ignored).
   level.set(start.key, 0);
   for (let iter = 0; iter < steps.length; iter++) {
     let changed = false;
     for (const e of edges) {
-      if (e.kind === 'return') continue;
+      if (e.kind === 'return' || back.has(e)) continue;
       const l = level.get(e.from);
       if (l === undefined) continue;
-      if ((level.get(e.to) ?? -1) < l + 1 && l + 1 < steps.length) {
+      if ((level.get(e.to) ?? -1) < l + 1) {
         level.set(e.to, l + 1);
         changed = true;
       }
@@ -83,7 +104,16 @@ const TYPE_LABEL: Record<string, string> = {
 
 export function ProcessDiagram({ steps, states = {} }: { steps: FlowStep[]; states?: Record<string, 'current' | 'done' | 'pending' | 'skipped'> }) {
   const edges = edgesOf(steps);
-  const { pos, width, height } = layout(steps, edges);
+  const back = cycleEdges(steps, edges);
+  const { pos, width, height } = layout(steps, edges, back);
+  // Several paths between the same two steps: stagger their labels.
+  const pairIndex = new Map<Edge, number>();
+  const pairCount = new Map<string, number>();
+  for (const e of edges) {
+    const k = `${e.from}>${e.to}`;
+    pairIndex.set(e, pairCount.get(k) ?? 0);
+    pairCount.set(k, (pairCount.get(k) ?? 0) + 1);
+  }
   return (
     <div className="table-wrap" style={{ border: '1px solid var(--c-border)', borderRadius: 6, background: '#fff' }}>
       <svg width={width} height={height} role="img" aria-label="Diagrama procesului" style={{ display: 'block', fontFamily: 'inherit' }}>
@@ -99,16 +129,17 @@ export function ProcessDiagram({ steps, states = {} }: { steps: FlowStep[]; stat
           if (!pos.has(e.from) || !pos.has(e.to)) return null;
           const a = pos.get(e.from)!;
           const b = pos.get(e.to)!;
-          if (e.kind === 'return' || b.x <= a.x) {
-            // return: dashed arc under the boxes
+          if (e.kind === 'return' || back.has(e) || b.x <= a.x) {
+            // return or loop back: dashed arc under the boxes
+            const color = e.kind === 'return' ? '#b45309' : '#6b7480';
             const x1 = a.x + W / 2;
             const x2 = b.x + W / 2;
             const y = Math.max(a.y, b.y) + H;
             const dip = 26 + (i % 3) * 8;
             return (
               <g key={i}>
-                <path d={`M${x1},${a.y + H} C${x1},${y + dip} ${x2},${y + dip} ${x2},${b.y + H + 2}`} fill="none" stroke="#b45309" strokeDasharray="5 4" strokeWidth="1.3" markerEnd="url(#arr-ret)" />
-                <title>{`Returnare: ${e.label}`}</title>
+                <path d={`M${x1},${a.y + H} C${x1},${y + dip} ${x2},${y + dip} ${x2},${b.y + H + 2}`} fill="none" stroke={color} strokeDasharray="5 4" strokeWidth="1.3" markerEnd={e.kind === 'return' ? 'url(#arr-ret)' : 'url(#arr)'} />
+                <title>{`${e.kind === 'return' ? 'Returnare' : 'Revenire'}: ${e.label}`}</title>
               </g>
             );
           }
@@ -119,8 +150,9 @@ export function ProcessDiagram({ steps, states = {} }: { steps: FlowStep[]; stat
             <g key={i}>
               <path d={`M${s.x},${s.y} C${mx},${s.y} ${mx},${t.y} ${t.x - 2},${t.y}`} fill="none" stroke={e.kind === 'reject' ? '#b42318' : '#6b7480'} strokeWidth="1.4" markerEnd="url(#arr)" />
               {e.label && (
-                <text x={mx} y={(s.y + t.y) / 2 - 4} fontSize="10" textAnchor="middle" fill="#3e4650">
-                  {e.label.length > 26 ? `${e.label.slice(0, 25)}…` : e.label}
+                <text x={mx} y={(s.y + t.y) / 2 - 4 + (pairIndex.get(e) ?? 0) * 13} fontSize="10" textAnchor="middle" fill="#3e4650">
+                  {e.label.length > 20 ? `${e.label.slice(0, 19)}…` : e.label}
+                  <title>{e.label}</title>
                 </text>
               )}
             </g>

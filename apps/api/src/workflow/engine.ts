@@ -276,7 +276,7 @@ async function runAction(run: Run, a: Action) {
       const entry = await createEntry(db, actor, {
         registerKey: String(a.register),
         direction,
-        subject: String(a.subject ?? `${ctx.def.name} – ${ctx.instance.title}`),
+        subject: String(a.subject ?? (ctx.instance.title.startsWith(ctx.def.name) ? ctx.instance.title : `${ctx.def.name} – ${ctx.instance.title}`)),
         senderId: direction === 'in' ? correspondent : null,
         recipientId: direction === 'out' ? correspondent : null,
         instanceId,
