@@ -1,5 +1,8 @@
 /** Error returned to the client as application/problem+json. Titles are Romanian and say how to fix the problem. */
 export class AppError extends Error {
+  /** Side effects that must survive the rollback of the failed transaction (e.g. notify the head of unit). */
+  onRollback?: () => Promise<void>;
+
   constructor(
     public readonly status: number,
     public readonly title: string,

@@ -1,7 +1,7 @@
 import { WorkingCalendar, canPause, computeDeadline, trafficLight, type DeadlineRule, type Pause } from '@flux/working-days';
 import { audit, type AuditActor } from '../audit/audit.js';
 import { today } from '../core/config.js';
-import { maybeOne, one, query, type Db } from '../core/db.js';
+import { maybeOne, one, query, tx, type Db } from '../core/db.js';
 import { AppError, notFound } from '../core/errors.js';
 import { notifyUsers } from '../notifications/service.js';
 
@@ -90,9 +90,14 @@ export async function pauseDeadline(db: Db, actor: AuditActor, instanceId: strin
       check.reason === 'max_pauses'
         ? `S-a atins numărul maxim de suspendări (${d.max_pauses}) pentru termenul „${d.definition_name}”.`
         : `S-a atins numărul maxim de zile de suspendare (${d.max_paused_days}) pentru termenul „${d.definition_name}”.`;
-    await notifyUsers(db, headUserIds, { kind: 'deadline_pause_refused', instanceId, title: message });
-    await audit(db, actor, { action: 'deadline.pause_refused', entityType: 'deadline', entityId: active.id, newValue: { reason: check.reason } });
-    throw new AppError(422, `${message} Termenul nu mai poate fi suspendat; șeful de serviciu a fost anunțat.`, [], { code: check.reason });
+    const error = new AppError(422, `${message} Termenul nu mai poate fi suspendat; șeful de serviciu a fost anunțat.`, [], { code: check.reason });
+    // The transition is rolled back; the notification and its audit event are written afterwards.
+    error.onRollback = () =>
+      tx(async (after) => {
+        await notifyUsers(after, headUserIds, { kind: 'deadline_pause_refused', instanceId, title: message });
+        await audit(after, actor, { action: 'deadline.pause_refused', entityType: 'deadline', entityId: active.id, newValue: { reason: check.reason } });
+      });
+    throw error;
   }
   await query(db, `insert into deadline_pause (deadline_id, paused_on, reason, created_by) values ($1, $2, $3, $4)`, [
     active.id,

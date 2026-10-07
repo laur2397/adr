@@ -12,22 +12,33 @@ export interface CorrespondentInput {
   beneficiaryId?: string | null;
 }
 
-/** Finds a correspondent by CUI (or e-mail when there is no CUI) or creates it. */
+/** Finds a correspondent by CUI (or e-mail when there is no CUI) or creates it; safe under concurrency. */
 export async function upsertCorrespondent(db: Db, organizationId: string, c: CorrespondentInput): Promise<string> {
   const cui = c.cui ? normalizeCui(c.cui) : null;
   const email = c.email?.trim().toLowerCase() || null;
+  const values = [organizationId, c.name, cui, cui ? (email ?? null) : email, c.address ?? null, c.beneficiaryId ?? null];
   if (cui) {
-    const found = await maybeOne(db, `select id from correspondent where organization_id = $1 and cui = $2`, [organizationId, cui]);
-    if (found) return found.id;
-  } else if (email) {
-    const found = await maybeOne(db, `select id from correspondent where organization_id = $1 and cui is null and lower(email) = $2`, [organizationId, email]);
-    if (found) return found.id;
+    await query(
+      db,
+      `insert into correspondent (organization_id, name, cui, email, address, beneficiary_id) values ($1, $2, $3, $4, $5, $6)
+       on conflict (organization_id, cui) where cui is not null do nothing`,
+      values,
+    );
+    return (await one(db, `select id from correspondent where organization_id = $1 and cui = $2`, [organizationId, cui])).id;
+  }
+  if (email) {
+    await query(
+      db,
+      `insert into correspondent (organization_id, name, cui, email, address, beneficiary_id) values ($1, $2, $3, $4, $5, $6)
+       on conflict (organization_id, lower(email)) where email is not null and cui is null do nothing`,
+      values,
+    );
+    return (await one(db, `select id from correspondent where organization_id = $1 and cui is null and lower(email) = $2`, [organizationId, email])).id;
   }
   const row = await one(
     db,
-    `insert into correspondent (organization_id, name, cui, email, address, beneficiary_id)
-     values ($1, $2, $3, $4, $5, $6) returning id`,
-    [organizationId, c.name, cui, email, c.address ?? null, c.beneficiaryId ?? null],
+    `insert into correspondent (organization_id, name, cui, email, address, beneficiary_id) values ($1, $2, $3, $4, $5, $6) returning id`,
+    values,
   );
   return row.id;
 }

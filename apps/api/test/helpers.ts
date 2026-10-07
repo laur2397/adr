@@ -58,7 +58,7 @@ export class Client {
 }
 
 export async function startApp() {
-  return buildApp({ logger: false });
+  return buildApp({ logger: process.env.TEST_LOG === '1' });
 }
 
 /** Runs queued jobs (document generation etc.) the way the worker would. */

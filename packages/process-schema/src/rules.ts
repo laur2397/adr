@@ -5,6 +5,7 @@ import type { JsonLogic } from './types.js';
 // Amount operators: JSONLogic's own + and - work on floats; money must not.
 const amt = (v: unknown): string => {
   if (v === null || v === undefined || v === '') return '0.00';
+  if (typeof v === 'number' && !Number.isFinite(v)) throw new Error('not a number');
   return parseAmount(typeof v === 'number' ? v : String(v));
 };
 

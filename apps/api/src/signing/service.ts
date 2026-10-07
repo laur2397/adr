@@ -1,7 +1,8 @@
 import { audit } from '../audit/audit.js';
 import { getPool, maybeOne, one, query, tx } from '../core/db.js';
 import { AppError, conflict, forbidden, notFound } from '../core/errors.js';
-import { addVersion, latestVersion, readVersion } from '../documents/service.js';
+import type { AuditActor } from '../audit/audit.js';
+import { addVersion, generateDocument, latestVersion, readVersion } from '../documents/service.js';
 import { actorOf, type CurrentUser } from '../identity/context.js';
 import { notifyUsers } from '../notifications/service.js';
 import { loadInstance } from '../workflow/load.js';
@@ -15,6 +16,18 @@ const ROLE_LABEL: Record<string, string> = {
   cfpp: 'Control financiar preventiv',
   director_approval: 'Director',
 };
+
+async function dataChangedSince(instanceId: string, since: string): Promise<boolean> {
+  const row = await maybeOne(
+    getPool(),
+    `select greatest(
+       (select max(updated_at) from instance_field where instance_id = $1 and source <> 'calculated'),
+       (select max(updated_at) from instance_list_row where instance_id = $1),
+       (select max(answered_at) from checklist_response where instance_id = $1)) > $2 as changed`,
+    [instanceId, since],
+  );
+  return Boolean(row?.changed);
+}
 
 /**
  * Starts signing the latest version of a process document. Allowed only for a user who has an
@@ -32,9 +45,17 @@ export async function signDocument(user: CurrentUser, instanceId: string, docKey
   });
   if (!task) throw forbidden('Nu aveți de semnat acest document la pasul curent al dosarului.');
 
-  const doc = await maybeOne(pool, `select id, title from document where instance_id = $1 and doc_key = $2`, [instanceId, docKey]);
-  if (!doc) throw new AppError(422, 'Documentul nu a fost generat încă. Generați-l, verificați-l, apoi semnați.');
-  const version = await latestVersion(pool, doc.id);
+  // Sign what the dossier says now: generate the document if missing, regenerate it if the data
+  // changed after the last version (which also invalidates signatures given on the old one).
+  let doc = await maybeOne(pool, `select id, title from document where instance_id = $1 and doc_key = $2`, [instanceId, docKey]);
+  let current = doc ? await latestVersion(pool, doc.id) : null;
+  if (!doc || !current || (await dataChangedSince(instanceId, current.created_at))) {
+    await generateDocument(actorOf(user) as AuditActor & { userId: string }, instanceId, docKey);
+    doc = await maybeOne(pool, `select id, title from document where instance_id = $1 and doc_key = $2`, [instanceId, docKey]);
+    if (!doc) throw new AppError(500, 'Documentul nu a putut fi generat.');
+    current = await latestVersion(pool, doc.id);
+  }
+  const version = current;
   if (!version || version.mime_type !== 'application/pdf') {
     throw new AppError(422, 'Se pot semna doar documente PDF. Conversia în PDF nu este disponibilă pe acest server; contactați administratorul IT.');
   }

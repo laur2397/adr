@@ -57,6 +57,8 @@ export async function tx<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<
     return result;
   } catch (err) {
     await client.query('rollback').catch(() => undefined);
+    const after = (err as { onRollback?: () => Promise<void> }).onRollback;
+    if (after) await after().catch((e) => console.error('onRollback failed', e));
     throw err;
   } finally {
     client.release();

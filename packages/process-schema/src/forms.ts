@@ -81,6 +81,16 @@ export function normalizeRow(columns: ColumnDef[], row: Row): Row {
   return out;
 }
 
+/** A formula over incomplete data (empty amounts, text in a number) yields no value instead of an error. */
+function safeEvaluate(formula: Parameters<typeof evaluate>[0], data: unknown): unknown {
+  try {
+    const v = evaluate(formula, data);
+    return typeof v === 'number' && !Number.isFinite(v) ? null : v;
+  } catch {
+    return null;
+  }
+}
+
 /** Fills calculated columns and calculated fields. Order: rows first, then fields in definition order. */
 export function computeCalculated(def: ProcessDefinition, ctx: RuleContext): FieldValues {
   const fields: FieldValues = { ...ctx.fields };
@@ -90,14 +100,14 @@ export function computeCalculated(def: ProcessDefinition, ctx: RuleContext): Fie
     fields[f.key] = rows.map((row) => {
       const r: Row = { ...row };
       for (const c of f.columns!) {
-        if (c.type === 'calculated' && c.formula !== undefined) r[c.key] = evaluate(c.formula, { ...ctx, fields, row: r });
+        if (c.type === 'calculated' && c.formula !== undefined) r[c.key] = safeEvaluate(c.formula, { ...ctx, fields, row: r });
       }
       return r;
     });
   }
   for (const f of def.fields) {
     if (f.type === 'calculated' && f.formula !== undefined) {
-      fields[f.key] = evaluate(f.formula, { ...ctx, fields });
+      fields[f.key] = safeEvaluate(f.formula, { ...ctx, fields });
     }
   }
   return fields;
