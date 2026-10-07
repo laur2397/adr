@@ -17,6 +17,7 @@
     "dev:web": "pnpm --filter @flux/web dev"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@types/node": "^22.15.0",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"

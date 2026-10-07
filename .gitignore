@@ -7,3 +7,4 @@ coverage/
 apps/api/storage/
 test-results/
 playwright-report/
+storage/

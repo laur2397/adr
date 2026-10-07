@@ -47,7 +47,7 @@
     },
     {
       "key": "contract_number",
-      "label": "Contract de finantare",
+      "label": "Contract de finanțare",
       "type": "text",
       "prefill": {
         "from": "project",

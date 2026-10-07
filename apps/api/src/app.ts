@@ -1,7 +1,9 @@
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
 import swagger from '@fastify/swagger';
+import fastifyStatic from '@fastify/static';
 import swaggerUi from '@fastify/swagger-ui';
+import { existsSync } from 'node:fs';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { SESSION_COOKIE, resolveSession } from './auth/session.js';
 import { config } from './core/config.js';
@@ -110,6 +112,23 @@ export async function buildApp(opts: { logger?: boolean } = {}): Promise<Fastify
   await app.register(documentRoutes, { prefix: '/api/v1' });
   await app.register(signingRoutes, { prefix: '/api/v1' });
   await app.register(reportingRoutes, { prefix: '/api/v1' });
+
+  // Production: the API also serves the built web app (WEB_DIST), with client-side routing fallback.
+  const webDist = process.env.WEB_DIST;
+  if (webDist && existsSync(webDist)) {
+    await app.register(fastifyStatic, { root: webDist, wildcard: false, maxAge: '1h' });
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/')) return reply.status(404).type('application/problem+json').send({ status: 404, title: 'Adresa nu există.', errors: [] });
+      return reply.header('cache-control', 'no-cache').sendFile('index.html');
+    });
+  }
+
+  app.addHook('onSend', async (_req, reply, payload) => {
+    reply.header('x-content-type-options', 'nosniff');
+    reply.header('referrer-policy', 'same-origin');
+    reply.header('x-frame-options', 'DENY');
+    return payload;
+  });
 
   return app;
 }

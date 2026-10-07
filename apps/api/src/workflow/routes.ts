@@ -202,7 +202,8 @@ export async function workflowRoutes(app: FastifyInstance) {
               kind: p.kind ?? 'forward',
               requiresComment: Boolean(p.requiresComment) || p.kind === 'return' || p.kind === 'reject',
               requiresSignatures: p.requiresSignatures ?? [],
-              chooseAssignee: findStep(ctx.def, p.to).assignment?.rule === 'chosen_by_previous' ? findStep(ctx.def, p.to).assignment?.role ?? null : null,
+              // '' = any user, a role key = users with that role, null = no choice needed
+              chooseAssignee: findStep(ctx.def, p.to).assignment?.rule === 'chosen_by_previous' ? (findStep(ctx.def, p.to).assignment?.role ?? '') : null,
             }))
           : [],
       });
@@ -248,6 +249,15 @@ export async function workflowRoutes(app: FastifyInstance) {
       checklists,
       deadlines: await deadlinesForInstance(pool, ctx.instance.organization_id, ctx.instance.id),
       documents: await documentsForInstance(pool, ctx.instance.id, ctx.def),
+      documentTitles: Object.fromEntries(
+        (
+          await query(
+            pool,
+            `select key, name from document_template where organization_id = $1 and key = any($2::text[]) and status = 'published'`,
+            [ctx.instance.organization_id, (ctx.def.documents ?? []).map((d) => d.template)],
+          )
+        ).map((r) => [(ctx.def.documents ?? []).find((d) => d.template === r.key)?.key, r.name]),
+      ),
       registrations: await entriesForInstance(pool, ctx.instance.id),
     };
   });
