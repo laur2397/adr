@@ -164,6 +164,13 @@ export async function pendingForUser(user: CurrentUser) {
         ? await maybeOne(pool, `select 1 from signature where document_id = $1 and signer_user_id = $2 and status = 'signed'`, [doc.id, user.id])
         : null;
       if (!signed) {
+        // Not generated yet (generate-and-sign): show the template's name instead of the key.
+        const template = doc
+          ? null
+          : await maybeOne(pool, `select name from document_template where organization_id = $1 and key = $2 and status = 'published' limit 1`, [
+              user.organizationId,
+              t.definition.documents?.find((d: { key: string }) => d.key === docKey)?.template,
+            ]);
         out.push({
           instanceId: t.instance_id,
           instanceTitle: t.instance_title,
@@ -171,7 +178,7 @@ export async function pendingForUser(user: CurrentUser) {
           taskId: t.id,
           stepName: t.name,
           docKey,
-          documentTitle: doc?.title ?? docKey,
+          documentTitle: doc?.title ?? template?.name ?? docKey,
           generated: Boolean(doc),
         });
       }
