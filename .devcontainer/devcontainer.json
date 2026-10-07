@@ -1,0 +1,17 @@
+{
+  "name": "Flux AM – demo",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "shutdownAction": "stopCompose",
+  "hostRequirements": { "cpus": 2, "memory": "4gb" },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "Flux AM", "onAutoForward": "openBrowser" }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "customizations": {
+    "codespaces": { "openFiles": [".devcontainer/README.md"] }
+  }
+}

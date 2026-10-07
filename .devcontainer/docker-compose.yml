@@ -1,0 +1,34 @@
+# Codespaces / Dev Containers: the full platform with demo data.
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm
+    command: sleep infinity
+    volumes:
+      - ../..:/workspaces:cached
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/flux
+      GOTENBERG_URL: http://gotenberg:3000
+      STORAGE_DIR: /home/node/flux-storage
+      ANAF_MODE: mock
+      SIGNATURE_PROVIDER: simulated
+      # Demo only: fixed key, simulated signatures, plain cookies behind the Codespaces proxy.
+      APP_KEY: ZGVtby1rZXktZmx1eC1hbS1jb2Rlc3BhY2VzLTMyYmI=
+      SECURE_COOKIES: "false"
+      PORT: "3000"
+    depends_on: [db, gotenberg]
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: flux
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+
+volumes:
+  pgdata:

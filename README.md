@@ -1,5 +1,11 @@
 # Flux AM
 
+[![Deschide în GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/laur2397/adr?quickstart=1)
+
+**Vezi platforma online:** apăsați butonul de mai sus → „Create codespace”. După 3–5 minute
+aplicația se deschide în browser, cu date demo; utilizatori și parolă în
+[.devcontainer/README.md](.devcontainer/README.md).
+
 Sistem de management electronic al documentelor și fluxurilor pentru Agențiile pentru Dezvoltare
 Regională (ADR) și alte Autorități de Management / Organisme Intermediare pentru fonduri europene:
 registratură, circuite interne de verificare și avizare (cereri de rambursare/plată, achiziții,
