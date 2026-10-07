@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "key": "p1_payment_request_check",
+  "name": "Verificarea cererii de rambursare / plata / prefinantare",
+  "description": "Pachetul P1. Pasii, conditiile si termenele sunt configurabile; termenul p1_verification este marcat 'de validat juridic' (OUG 133/2021).",
+  "subject": {
+    "requires": ["project", "beneficiary", "register_entry"],
+    "titleTemplate": "{{fields.request_type_label}} {{fields.request_no}} - SMIS {{project.smis_code}}"
+  },
+  "fields": [
+    { "key": "request_no", "label": "Numar cerere MySMIS", "type": "text" },
+    { "key": "request_type", "label": "Tip cerere", "type": "choice", "nomenclature": "payment_request_type" },
+    { "key": "submitted_at", "label": "Data depunerii in MySMIS", "type": "date" },
+    { "key": "smis_code", "label": "Cod SMIS", "type": "text", "format": "smis_code", "prefill": { "from": "project", "path": "smis_code" } },
+    { "key": "project_title", "label": "Titlul proiectului", "type": "text", "prefill": { "from": "project", "path": "title" } },
+    { "key": "contract_number", "label": "Contract de finantare", "type": "text", "prefill": { "from": "project", "path": "contract_number" } },
+    { "key": "contract_date", "label": "Data contractului", "type": "date", "prefill": { "from": "project", "path": "contract_date" } },
+    { "key": "eligible_value", "label": "Valoare eligibila proiect", "type": "amount", "prefill": { "from": "project", "path": "eligible_value" } },
+    { "key": "beneficiary_name", "label": "Beneficiar", "type": "text", "prefill": { "from": "beneficiary", "path": "name" } },
+    { "key": "beneficiary_cui", "label": "CUI", "type": "text", "format": "cui", "prefill": { "from": "beneficiary", "path": "cui" } },
+    { "key": "beneficiary_iban", "label": "Cont IBAN", "type": "text", "format": "iban", "prefill": { "from": "previous_instance", "path": "beneficiary_iban" } },
+    { "key": "double_check", "label": "Dubla verificare (EVF + EI)", "type": "boolean", "prefill": { "from": "constant", "value": false } },
+    {
+      "key": "cfpp_required",
+      "label": "Necesita viza CFPP",
+      "type": "calculated",
+      "formula": { "in": [{ "var": "fields.request_type" }, ["plata", "prefinantare"]] }
+    },
+    {
+      "key": "expenses",
+      "label": "Cheltuieli solicitate",
+      "type": "line_items",
+      "columns": [
+        { "key": "budget_line", "label": "Linie bugetara", "type": "choice", "nomenclature": "project_budget_lines" },
+        { "key": "document_ref", "label": "Document justificativ", "type": "text" },
+        { "key": "requested", "label": "Suma solicitata", "type": "amount", "total": true },
+        { "key": "eligible", "label": "Suma eligibila", "type": "amount", "total": true },
+        { "key": "non_eligible", "label": "Suma neeligibila", "type": "calculated", "formula": { "-": [{ "var": "row.requested" }, { "var": "row.eligible" }] }, "total": true },
+        { "key": "reason", "label": "Motiv", "type": "text" }
+      ],
+      "rowValidations": [
+        { "rule": { "<=": [{ "var": "row.eligible" }, { "var": "row.requested" }] }, "message": "Suma eligibila nu poate depasi suma solicitata. Corectati suma eligibila pe aceasta linie." },
+        { "rule": { "or": [{ "==": [{ "var": "row.eligible" }, { "var": "row.requested" }] }, { "!!": { "var": "row.reason" } }] }, "message": "Ati diminuat suma: completati motivul in coloana Motiv." }
+      ]
+    },
+    {
+      "key": "total_requested",
+      "label": "Total solicitat",
+      "type": "calculated",
+      "formula": { "reduce": [{ "var": "fields.expenses" }, { "+": [{ "var": "accumulator" }, { "var": "current.requested" }] }, 0] }
+    },
+    {
+      "key": "total_eligible",
+      "label": "Total eligibil",
+      "type": "calculated",
+      "formula": { "reduce": [{ "var": "fields.expenses" }, { "+": [{ "var": "accumulator" }, { "var": "current.eligible" }] }, 0] }
+    },
+    { "key": "findings", "label": "Constatari", "type": "textarea" },
+    { "key": "clarification_questions", "label": "Solicitari de clarificari", "type": "textarea" }
+  ],
+  "checklists": [
+    { "key": "verification", "template": "p1_default", "verifierRoles": ["primary", "second"] }
+  ],
+  "documents": [
+    { "key": "verification_note", "template": "p1_verification_note", "docType": "verification_note", "signatureLevel": "qualified" },
+    { "key": "clarification_letter", "template": "p1_clarification_letter", "docType": "clarification_letter", "signatureLevel": "qualified" },
+    { "key": "authorization_notice", "template": "p1_authorization_notice", "docType": "authorization_notice", "signatureLevel": "qualified" }
+  ],
+  "deadlines": [
+    { "key": "verification", "definition": "p1_verification", "stopsAt": ["notify_beneficiary"] },
+    { "key": "internal_financial_check", "definition": "internal_financial_check_15", "startsAt": "evf_check", "stopsAt": ["head_review"] }
+  ],
+  "separationOfDuties": [
+    { "steps": ["evf_check", "ei_check"], "message": "Verificarea dubla trebuie facuta de doi experti diferiti." },
+    { "steps": ["evf_check", "head_review"], "message": "Cel care a intocmit nota nu o poate aviza." }
+  ],
+  "steps": [
+    {
+      "key": "registration",
+      "type": "start",
+      "name": "Inregistrare si repartizare",
+      "assignment": { "rule": "role_queue", "role": "registry_inspector" },
+      "fieldAccess": { "request_no": "required", "request_type": "required", "submitted_at": "required", "double_check": "editable", "expenses": "hidden", "findings": "hidden" },
+      "paths": [
+        {
+          "key": "register_and_assign",
+          "label": "Inregistreaza si repartizeaza",
+          "to": "split_checks",
+          "actions": [
+            { "type": "register", "register": "general", "direction": "in" },
+            { "type": "grant_access", "principal": "project_expert", "permission": "edit" }
+          ]
+        },
+        { "key": "cancel", "label": "Anuleaza (inregistrare gresita)", "to": "cancelled", "kind": "reject", "requiresComment": true }
+      ]
+    },
+    {
+      "key": "split_checks",
+      "type": "parallel_split",
+      "name": "Verificare",
+      "branches": [
+        { "to": "evf_check" },
+        { "to": "ei_check", "when": { "==": [{ "var": "fields.double_check" }, true] } }
+      ]
+    },
+    {
+      "key": "evf_check",
+      "type": "human",
+      "name": "Verificare financiara (EVF)",
+      "assignment": { "rule": "project_expert", "role": "evf_expert" },
+      "checklist": "verification",
+      "checklistVerifier": "primary",
+      "deadline": "internal_financial_check",
+      "fieldAccess": { "expenses": "editable", "findings": "required", "clarification_questions": "editable", "double_check": "visible" },
+      "onEnter": [{ "type": "generate_document", "document": "verification_note" }],
+      "paths": [
+        {
+          "key": "submit",
+          "label": "Trimite la seful de serviciu",
+          "to": "join_checks",
+          "requiresChecklistComplete": "verification",
+          "requiresSignatures": ["verification_note"],
+          "validations": [
+            { "rule": { "<=": [{ "var": "fields.total_eligible" }, { "var": "fields.total_requested" }] }, "message": "Totalul eligibil depaseste totalul solicitat. Verificati liniile de cheltuieli." }
+          ],
+          "actions": [{ "type": "generate_document", "document": "verification_note" }]
+        },
+        {
+          "key": "request_clarifications",
+          "label": "Cere clarificari",
+          "to": "clarifications",
+          "validations": [
+            { "rule": { "!!": { "var": "fields.clarification_questions" } }, "message": "Completati solicitarile de clarificari inainte de a trimite scrisoarea." }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "clarifications",
+      "type": "human",
+      "name": "Clarificari la beneficiar",
+      "assignment": { "rule": "previous_actor", "step": "evf_check" },
+      "fieldAccess": { "clarification_questions": "visible", "expenses": "visible" },
+      "onEnter": [
+        { "type": "generate_document", "document": "clarification_letter" },
+        { "type": "pause_deadline", "deadline": "verification", "reason": "clarificari" },
+        { "type": "register", "register": "general", "direction": "out", "document": "clarification_letter" }
+      ],
+      "paths": [
+        {
+          "key": "answer_received",
+          "label": "Raspuns primit",
+          "to": "evf_check",
+          "actions": [
+            { "type": "register", "register": "general", "direction": "in", "relatedTo": "previous_out" },
+            { "type": "resume_deadline", "deadline": "verification" }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "ei_check",
+      "type": "human",
+      "name": "Verificare tehnica (EI)",
+      "assignment": { "rule": "role_queue", "role": "ei_expert" },
+      "checklist": "verification",
+      "checklistVerifier": "second",
+      "fieldAccess": { "expenses": "visible", "findings": "visible" },
+      "paths": [
+        { "key": "submit", "label": "Confirma verificarea", "to": "join_checks", "requiresChecklistComplete": "verification" }
+      ]
+    },
+    { "key": "join_checks", "type": "parallel_join", "name": "Verificari finalizate", "join": "all", "next": "head_review" },
+    {
+      "key": "head_review",
+      "type": "human",
+      "name": "Avizare sef serviciu",
+      "assignment": { "rule": "department_head" },
+      "fieldAccess": { "expenses": "visible", "findings": "visible" },
+      "paths": [
+        { "key": "endorse", "label": "Avizeaza", "to": "cfpp_decision", "requiresSignatures": ["verification_note"] },
+        { "key": "return", "label": "Returneaza la expert", "to": "evf_check", "kind": "return", "requiresComment": true }
+      ]
+    },
+    {
+      "key": "cfpp_decision",
+      "type": "decision",
+      "name": "Este necesara viza CFPP?",
+      "paths": [
+        { "key": "yes", "label": "Da", "to": "cfpp", "visibleWhen": { "==": [{ "var": "fields.cfpp_required" }, true] } },
+        { "key": "no", "label": "Nu", "to": "director_approval", "visibleWhen": { "==": [{ "var": "fields.cfpp_required" }, false] } }
+      ]
+    },
+    {
+      "key": "cfpp",
+      "type": "human",
+      "name": "Viza CFPP",
+      "assignment": { "rule": "role_queue", "role": "cfpp" },
+      "paths": [
+        { "key": "grant", "label": "Acorda viza", "to": "director_approval", "requiresSignatures": ["verification_note"] },
+        { "key": "refuse", "label": "Refuza viza", "to": "head_review", "kind": "return", "requiresComment": true }
+      ]
+    },
+    {
+      "key": "director_approval",
+      "type": "human",
+      "name": "Aprobare director",
+      "assignment": { "rule": "role_queue", "role": "director" },
+      "onEnter": [{ "type": "generate_document", "document": "authorization_notice" }],
+      "paths": [
+        {
+          "key": "approve",
+          "label": "Aproba si semneaza",
+          "to": "notify_beneficiary",
+          "requiresSignatures": ["verification_note", "authorization_notice"],
+          "actions": [{ "type": "register", "register": "general", "direction": "out", "document": "authorization_notice" }]
+        },
+        { "key": "return", "label": "Returneaza", "to": "head_review", "kind": "return", "requiresComment": true }
+      ]
+    },
+    {
+      "key": "notify_beneficiary",
+      "type": "system",
+      "name": "Notificare beneficiar",
+      "onEnter": [{ "type": "notify", "to": "beneficiary_email", "template": "p1_authorization_email", "attach": ["authorization_notice"] }],
+      "next": "register_crcp"
+    },
+    {
+      "key": "register_crcp",
+      "type": "system",
+      "name": "Inregistrare in registrul CR/CP",
+      "onEnter": [
+        { "type": "register", "register": "cr_cp", "direction": "internal" },
+        { "type": "update_budget_lines", "from": "expenses", "amount": "eligible" }
+      ],
+      "next": "done"
+    },
+    { "key": "done", "type": "end_positive", "name": "Finalizat" },
+    { "key": "cancelled", "type": "end_negative", "name": "Anulat" }
+  ]
+}
