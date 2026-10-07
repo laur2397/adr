@@ -98,7 +98,7 @@ export function Instances() {
           <Empty>Niciun dosar nu corespunde filtrelor.</Empty>
         ) : (
           <div className="table-wrap">
-            <table className="data">
+            <table className="data cards-mobile">
               <thead>
                 <tr>
                   <th>Dosar</th>
@@ -119,19 +119,19 @@ export function Instances() {
                         {i.definition_name}
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Beneficiar">
                       {i.beneficiary_name ?? '—'}
                       {i.smis_code && <div className="muted small">SMIS {i.smis_code}</div>}
                     </td>
-                    <td>
+                    <td data-label="Pas curent">
                       {i.current_steps ?? '—'}
                       {i.current_assignees && <div className="muted small">{i.current_assignees}</div>}
                     </td>
-                    <td>{i.status === 'active' ? <DueBadge due={i.next_due} today={today} /> : '—'}</td>
-                    <td>
+                    <td data-label="Termen">{i.status === 'active' ? <DueBadge due={i.next_due} today={today} /> : '—'}</td>
+                    <td data-label="Stare">
                       <StatusBadge status={i.status} />
                     </td>
-                    <td className="nowrap">{fmtDate(i.started_at)}</td>
+                    <td className="nowrap" data-label="Pornit">{fmtDate(i.started_at)}</td>
                   </tr>
                 ))}
               </tbody>

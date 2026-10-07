@@ -82,7 +82,7 @@ test('P1 dossier from registration to approval', async ({ browser }) => {
   await expect(evf.getByText('8/8 completate')).toBeVisible();
 
   await evf.getByRole('tab', { name: /Documente/ }).click();
-  await evf.getByRole('button', { name: /Semnează/ }).first().click();
+  await evf.getByRole('tabpanel').getByRole('button', { name: /Semnează/ }).first().click();
   await expect(evf.getByText('Documentul a fost semnat.')).toBeVisible({ timeout: 60_000 });
   await expect(evf.getByText('SIMULARE').first()).toBeVisible();
   await takePath(evf, 'Trimite la șeful de serviciu');
@@ -91,7 +91,7 @@ test('P1 dossier from registration to approval', async ({ browser }) => {
   const head = await login(browser, 'sef.svf');
   await openFromPanel(head, /Verificarea cererii de rambursare/);
   await head.getByRole('tab', { name: /Documente/ }).click();
-  await head.getByRole('button', { name: 'Semnează', exact: true }).click();
+  await head.getByRole('tabpanel').getByRole('button', { name: 'Semnează', exact: true }).click();
   await expect(head.getByText('Documentul a fost semnat.')).toBeVisible({ timeout: 60_000 });
   await takePath(head, 'Avizează');
 
@@ -100,7 +100,7 @@ test('P1 dossier from registration to approval', async ({ browser }) => {
   await openFromPanel(director, /Verificarea cererii de rambursare/);
   await director.getByRole('tab', { name: /Documente/ }).click();
   for (const _ of [0, 1]) {
-    const sign = director.getByRole('button', { name: /^(Semnează|Generează și semnează)$/ }).first();
+    const sign = director.getByRole('tabpanel').getByRole('button', { name: /^(Semnează|Generează și semnează)$/ }).first();
     await sign.click();
     await expect(director.getByText('Documentul a fost semnat.')).toBeVisible({ timeout: 60_000 });
     await director.reload();

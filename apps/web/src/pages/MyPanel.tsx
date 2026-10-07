@@ -36,7 +36,7 @@ function group(tasks: Task[], today: string) {
 function TaskTable({ tasks, today, claim }: { tasks: Task[]; today: string; claim?: (id: string) => void }) {
   return (
     <div className="table-wrap">
-      <table className="data">
+      <table className="data cards-mobile">
         <thead>
           <tr>
             <th>Dosar</th>
@@ -56,13 +56,13 @@ function TaskTable({ tasks, today, claim }: { tasks: Task[]; today: string; clai
                   {t.process_name}
                 </div>
               </td>
-              <td>
+              <td data-label="Pas">
                 {t.name}
                 {t.onBehalfOf && <div className="small muted">în locul unui coleg absent</div>}
                 {t.inQueue && <div className="small muted">coada: {t.queue_name}</div>}
               </td>
-              <td>{t.beneficiary_name ?? '—'}</td>
-              <td>
+              <td data-label="Beneficiar">{t.beneficiary_name ?? '—'}</td>
+              <td data-label="Termen">
                 <DueBadge due={t.due_at ?? t.instance_due} today={today} />
               </td>
               {claim && (
@@ -114,6 +114,16 @@ export function MyPanel() {
           Dosar nou
         </Link>
       </div>
+      <nav className="quicklinks" aria-label="Salt rapid">
+        {(toSign.data?.items.length ?? 0) > 0 && (
+          <a href="#de-semnat" className="hot">
+            De semnat ({toSign.data.items.length})
+          </a>
+        )}
+        <a href="#sarcini">Sarcinile mele ({mine.length})</a>
+        {queue.length > 0 && <a href="#coada">Coada comună ({queue.length})</a>}
+        <a href="#notificari">Notificări{notifications.data?.unread ? ` (${notifications.data.unread} noi)` : ''}</a>
+      </nav>
       {me.replacing.length > 0 && (
         <div className="alert info">
           Îi înlocuiți pe: {me.replacing.map((r) => r.fullName).join(', ')}. Sarcinile lor apar mai jos; acțiunile se înregistrează „în numele” lor.
@@ -121,7 +131,7 @@ export function MyPanel() {
       )}
       <ErrorAlert error={tasks.error ?? claim.error} />
       <div className="grid-2">
-        <div className="stack">
+        <div className="stack" id="sarcini">
           {tasks.isLoading ? (
             <Loading />
           ) : mine.length === 0 ? (
@@ -138,12 +148,14 @@ export function MyPanel() {
               ))
           )}
           {queue.length > 0 && (
+            <div id="coada">
             <Card title={`Coada comună (${queue.length})`} flush>
               <TaskTable tasks={queue} today={today} claim={(id) => claim.mutate(id)} />
             </Card>
+            </div>
           )}
         </div>
-        <div className="stack">
+        <div className="stack" id="de-semnat">
           <Card
             title="Documente de semnat"
             actions={
@@ -178,6 +190,7 @@ export function MyPanel() {
               <Empty>Nimic de semnat.</Empty>
             )}
           </Card>
+          <div id="notificari" />
           <Card
             title="Notificări"
             actions={

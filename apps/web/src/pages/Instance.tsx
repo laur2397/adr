@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { api, ApiError, can } from '../api';
 import { FieldInput, type FieldView } from '../components/fields';
@@ -8,14 +8,22 @@ import { CoiBanner, CommentsPanel, DoubleFundingAlerts } from '../components/Col
 import { EvidencePanel } from '../components/Evidence';
 import { ProcessDiagram } from '../components/ProcessDiagram';
 import { LineItems } from '../components/LineItems';
-import { Card, ErrorAlert, Loading, Modal, StatusBadge, useMe } from '../components/ui';
+import { Badge, Card, ErrorAlert, Loading, Modal, StatusBadge, useMe } from '../components/ui';
 import { fmtAmount, fmtDate, fmtDateTime } from '../format';
 
 type Tab = 'form' | 'checklist' | 'visit' | 'documents' | 'comments' | 'flow' | 'deadlines' | 'history' | 'registers' | 'audit';
 
 function Circuit({ steps }: { steps: any[] }) {
+  const ref = useRef<HTMLOListElement>(null);
+  // On a narrow screen the bar scrolls sideways: bring the current step into view.
+  useEffect(() => {
+    const ol = ref.current;
+    const cur = ol?.querySelector('[aria-current="step"]');
+    if (!ol || !cur || ol.scrollWidth <= ol.clientWidth) return;
+    ol.scrollLeft += cur.getBoundingClientRect().left - ol.getBoundingClientRect().left - 24;
+  }, [steps]);
   return (
-    <ol className="circuit" aria-label="Circuitul dosarului">
+    <ol className="circuit" aria-label="Circuitul dosarului" ref={ref}>
       {steps.map((s) => (
         <li key={s.key}>
           <span className={`step ${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}>
@@ -34,8 +42,58 @@ function Circuit({ steps }: { steps: any[] }) {
   );
 }
 
+/** Documents the current step's actions need signed, with Open and Sign at hand (no tab switching on a phone). */
+function SignHere({ instance, keys }: { instance: any; keys: string[] }) {
+  const me = useMe();
+  const qc = useQueryClient();
+  const sign = useMutation({
+    mutationFn: (key: string) => api.post(`/instances/${instance.id}/documents/${key}/sign`),
+    onSuccess: (r: any) => {
+      if (r?.redirectUrl) window.open(r.redirectUrl, '_blank', 'noopener');
+      qc.invalidateQueries({ queryKey: ['instance', instance.id] });
+      qc.invalidateQueries({ queryKey: ['signatures-pending'] });
+    },
+  });
+  if (!keys.length) return null;
+  return (
+    <>
+      <ErrorAlert error={sign.error} />
+      <ul className="sign-list" aria-label="Documente de semnat la acest pas">
+        {keys.map((key) => {
+          const doc = instance.documents.find((d: any) => d.key === key);
+          const latest = doc?.versions[0];
+          const signed = doc?.signatures.some((x: any) => x.status === 'signed' && x.signer_user_id === me.id);
+          return (
+            <li key={key}>
+              <div className="doc">
+                <strong>{doc?.title ?? instance.documentTitles?.[key] ?? key}</strong>
+                <span className="small muted">{latest ? `v${latest.version_no} · ${fmtDateTime(latest.created_at)}` : 'se generează la semnare'}</span>
+              </div>
+              <div className="row">
+                {latest && (
+                  <a className="button small" href={`/api/v1/documents/versions/${latest.id}/content?inline=1`} target="_blank" rel="noopener">
+                    Deschide
+                  </a>
+                )}
+                {signed ? (
+                  <Badge tone="green">Semnat de dvs.</Badge>
+                ) : (
+                  <button className="primary small" disabled={sign.isPending} onClick={() => sign.mutate(key)}>
+                    {sign.isPending && sign.variables === key ? 'Se semnează…' : latest ? 'Semnează' : 'Generează și semnează'}
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
 function ActionPanel({ instance, task }: { instance: any; task: any }) {
   const qc = useQueryClient();
+  const toSign: string[] = [...new Set<string>(task.paths.flatMap((p: any) => p.requiresSignatures))];
   const [path, setPath] = useState<any | null>(null);
   const [comment, setComment] = useState('');
   const [assignTo, setAssignTo] = useState('');
@@ -60,18 +118,14 @@ function ActionPanel({ instance, task }: { instance: any; task: any }) {
     <Card title={`Sarcina mea: ${task.name}`}>
       {task.onBehalfOf && <div className="alert info small">Acționați în numele unui coleg absent; acțiunile se înregistrează astfel.</div>}
       {task.dueAt && <p className="small muted">Termen intern: {fmtDate(task.dueAt.slice(0, 10))}</p>}
-      <div className="row">
+      <SignHere instance={instance} keys={toSign} />
+      <div className="row actions-bar">
         {task.paths.map((p: any) => (
           <button key={p.key} className={p.kind === 'forward' ? 'primary' : p.kind === 'reject' ? 'danger' : ''} onClick={() => setPath(p)}>
             {p.label}
           </button>
         ))}
       </div>
-      {task.paths.some((p: any) => p.requiresSignatures.length) && (
-        <p className="small muted" style={{ marginTop: 8 }}>
-          Unele acțiuni cer semnarea documentelor din fila „Documente”.
-        </p>
-      )}
       <Modal
         open={Boolean(path)}
         title={path?.label ?? ''}

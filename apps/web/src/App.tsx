@@ -89,12 +89,31 @@ function Layout({ me }: { me: Me }) {
   };
   const unread = notifications.data?.unread ?? 0;
   const [q, setQ] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const location = useLocation();
+  const pending = useQuery({ queryKey: ['signatures-pending'], queryFn: () => api.get('/signatures/pending'), refetchInterval: 120_000 });
+  const toSign = pending.data?.items?.length ?? 0;
+  // Navigating closes the phone menu and search.
+  useEffect(() => {
+    setMenuOpen(false);
+    setSearchOpen(false);
+  }, [location.pathname, location.search]);
+  const initials = me.fullName
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
   return (
-    <div className="app">
+    <div className={`app${menuOpen ? ' menu-open' : ''}`}>
       <a href="#main" className="skip-link">
         Salt la conținut
       </a>
       <header className="topbar">
+        <button className="icon-btn only-mobile" aria-label="Meniu" aria-expanded={menuOpen} aria-controls="main-nav" onClick={() => setMenuOpen((o) => !o)}>
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+        </button>
         <NavLink to="/" className="brand">
           Flux AM
         </NavLink>
@@ -102,6 +121,7 @@ function Layout({ me }: { me: Me }) {
         <span className="spacer" />
         <form
           role="search"
+          className={`topsearch${searchOpen ? ' open' : ''}`}
           onSubmit={(e) => {
             e.preventDefault();
             if (q.trim().length >= 2) navigate(`/cautare?q=${encodeURIComponent(q.trim())}`);
@@ -110,24 +130,25 @@ function Layout({ me }: { me: Me }) {
           <label htmlFor="global-search" className="sr-only">
             Caută în dosare și registre
           </label>
-          <input
-            id="global-search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Caută dosare, beneficiari, facturi…"
-            style={{ width: 260, padding: '0.3rem 0.6rem', border: '0', borderRadius: 6 }}
-          />
+          <input id="global-search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Caută dosare, beneficiari, facturi…" />
         </form>
-        <NavLink to="/cont" className="button small" style={{ color: '#fff', background: 'transparent', borderColor: 'rgb(255 255 255 / 35%)' }}>
-          {me.fullName}
-          {unread > 0 && <span className="badge red" aria-label={`${unread} notificări necitite`}>{unread}</span>}
+        <button className="icon-btn only-mobile" aria-label="Caută" aria-expanded={searchOpen} onClick={() => setSearchOpen((o) => !o)}>
+          <svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+        </button>
+        <NavLink to="/cont" className="button small userbtn" aria-label={`Contul meu: ${me.fullName}${unread ? `, ${unread} notificări necitite` : ''}`}>
+          <span className="only-desktop">{me.fullName}</span>
+          <span className="avatar mobile-avatar" aria-hidden="true">
+            {initials}
+          </span>
+          {unread > 0 && <span className="badge red" aria-hidden="true">{unread}</span>}
         </NavLink>
-        <button className="small" onClick={logout}>
+        <button className="small only-desktop" onClick={logout}>
           Ieșire
         </button>
       </header>
+      {menuOpen && <div className="nav-backdrop only-mobile" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
       <div className="shell">
-        <nav className="sidenav" aria-label="Navigare principală">
+        <nav className="sidenav" id="main-nav" aria-label="Navigare principală">
           <div className="section">Lucru</div>
           <NavLink to="/" end>
             Panoul meu
@@ -156,6 +177,9 @@ function Layout({ me }: { me: Me }) {
           )}
           <div className="section">Cont</div>
           <NavLink to="/cont">Contul meu</NavLink>
+          <button className="link only-mobile sidenav-logout" onClick={logout}>
+            Ieșire din cont
+          </button>
         </nav>
         <main id="main" tabIndex={-1}>
           <Routes>
@@ -179,6 +203,32 @@ function Layout({ me }: { me: Me }) {
           </Routes>
         </main>
       </div>
+      <nav className="bottomnav only-mobile" aria-label="Navigare rapidă">
+        <NavLink to="/" end>
+          <span aria-hidden="true">⌂</span>Panou
+          {toSign > 0 && <span className="badge red">{toSign}</span>}
+        </NavLink>
+        <NavLink to="/dosare">
+          <span aria-hidden="true">▤</span>Dosare
+        </NavLink>
+        {can.dashboard(me) ? (
+          <NavLink to="/tablou">
+            <span aria-hidden="true">▦</span>Tablou
+          </NavLink>
+        ) : (
+          <NavLink to="/dosar-nou">
+            <span aria-hidden="true">＋</span>Dosar nou
+          </NavLink>
+        )}
+        {can.visits(me) && (
+          <NavLink to="/vizite">
+            <span aria-hidden="true">⚑</span>Vizite
+          </NavLink>
+        )}
+        <button type="button" onClick={() => setMenuOpen(true)} aria-controls="main-nav" aria-expanded={menuOpen}>
+          <span aria-hidden="true">☰</span>Meniu
+        </button>
+      </nav>
     </div>
   );
 }

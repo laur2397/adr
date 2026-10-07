@@ -10,7 +10,7 @@ const RESULT_TONE: Record<string, 'green' | 'yellow' | 'red'> = { conform: 'gree
 function VisitTable({ items, today }: { items: any[]; today: string }) {
   return (
     <div className="table-wrap">
-      <table className="data">
+      <table className="data cards-mobile">
         <thead>
           <tr>
             <th>Data</th>
@@ -42,14 +42,14 @@ function VisitTable({ items, today }: { items: any[]; today: string }) {
                     {v.visit_reason_label ? ` · ${v.visit_reason_label}` : ''}
                   </div>
                 </td>
-                <td className="small">{v.location ?? '—'}</td>
-                <td className="small">{v.inspector ?? '—'}</td>
-                <td className="small">{v.status === 'active' ? (v.current_step ?? '—') : <Badge tone="gray">închis</Badge>}</td>
-                <td className="num">
+                <td className="small" data-label="Locul">{v.location ?? '—'}</td>
+                <td className="small" data-label="Inspector">{v.inspector ?? '—'}</td>
+                <td className="small" data-label="Stadiu">{v.status === 'active' ? (v.current_step ?? '—') : <Badge tone="gray">închis</Badge>}</td>
+                <td className="num" data-label="Fotografii">
                   {v.photos}
                   {v.signed ? <div className="small muted">semnat</div> : null}
                 </td>
-                <td>{v.result ? <Badge tone={RESULT_TONE[v.result] ?? 'gray'}>{v.result_label}</Badge> : '—'}</td>
+                <td data-label="Rezultat">{v.result ? <Badge tone={RESULT_TONE[v.result] ?? 'gray'}>{v.result_label}</Badge> : '—'}</td>
                 <td className="right">
                   {v.mine && (
                     <Link className="button primary small" to={`/teren/${v.id}`}>

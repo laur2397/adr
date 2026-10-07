@@ -590,7 +590,16 @@ de verificare fără răspuns, documente nesemnate).
 | Administrare | `/admin/*` | utilizatori, roluri, înlocuiri, calendar, termene, procese (JSON + diagramă + validare), liste, șabloane, import, integrări, audit |
 | Contul meu | `/cont` | parolă, 2FA |
 
-Meniul se adaptează după roluri (`can.*` în `api.ts`). Accesibilitate: HTML semantic, etichete pe
+Meniul se adaptează după roluri (`can.*` în `api.ts`).
+
+**Telefon și tabletă** (sub 860 px): meniul devine un sertar deschis din ☰, apare o bară de navigare
+jos (Panou cu numărul documentelor de semnat, Dosare, Tablou sau Dosar nou, Vizite, Meniu), căutarea
+se deschide din iconiță, listele principale (sarcini, dosare, vizite) devin carduri, iar tabelele
+derulează în interiorul cardului. În dosar, bara circuitului și filele derulează lateral, cu pasul
+curent adus în vedere. Pe orice ecran, „Sarcina mea” arată documentele cerute la pasul curent, cu
+„Deschide” și „Semnează”, astfel că directorul și șefii aprobă fără să treacă prin fila Documente.
+Testul `tests/e2e/mobile.spec.ts` verifică pe ecranul de 320 px că nicio pagină nu e mai lată decât
+ecranul și că o decizie se semnează și se aprobă din „Sarcina mea”. Accesibilitate: HTML semantic, etichete pe
 toate câmpurile, navigare cu tastatura, contrast WCAG AA.
 
 ## 22. Joburi în fundal (worker)
@@ -722,6 +731,8 @@ node tests/load/open-dossier.mjs http://localhost:3000 director <parola> 200 30
 | `apps/api/test/phase2` (16) | P3, P4 ca sub-flux, debite, P6 (TVA, CFPP, separare), P7, conflict de interese, dublă finanțare, eșantionare reproductibilă, căutare, comentarii, arhivă, tokenuri, webhook-uri, e-mail |
 | `db/tests/verify-schema.sh` | 100 de înregistrări concurente → 1..100 fără goluri; lanț de audit sub concurență, refuz UPDATE/DELETE, detectarea alterării; imutabilitatea definițiilor |
 | `tests/e2e/p1.spec.ts` | dosar P1 prin interfață cu patru utilizatori |
+| `tests/e2e/field.spec.ts` | vizita pe teren pe un telefon emulat: fără semnal, redeschidere, sincronizare, trimitere |
+| `tests/e2e/mobile.spec.ts` | directorul pe un telefon de 320 px: nicio pagină mai lată decât ecranul, meniul, semnare și aprobare din „Sarcina mea” |
 | `apps/api/test/visits` (7) | vizite din eșantion fără dubluri, programare, fotografii cu GPS și semnătură (doar inspectorul, idempotent, doar imagini reale), validările raportului, anexa foto în raport, urmărirea recomandărilor, sesizarea automată P4 |
 | `tests/load` | deschiderea dosarului la 200 de utilizatori concurenți |
 
