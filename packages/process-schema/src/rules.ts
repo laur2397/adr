@@ -27,6 +27,14 @@ jsonLogic.add_operation('amount_sum', (rows: unknown, column: unknown) => {
   return addAmounts(...rows.map((r) => amt((r as Record<string, unknown> | null)?.[String(column)])));
 });
 
+/** round: [number, decimals] -> number rounded half away from zero (null for no number). */
+jsonLogic.add_operation('round', (x: unknown, d: unknown) => {
+  const n = Number(typeof x === 'string' ? x.replace(',', '.') : x);
+  if (x === null || x === undefined || x === '' || !Number.isFinite(n)) return null;
+  const f = 10 ** Number(d ?? 0);
+  return (Math.sign(n) * Math.round(Math.abs(n) * f)) / f;
+});
+
 export function evaluate(rule: JsonLogic | undefined, data: unknown): unknown {
   if (rule === undefined) return undefined;
   return jsonLogic.apply(rule as never, data);

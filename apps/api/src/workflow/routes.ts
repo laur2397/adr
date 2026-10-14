@@ -1,4 +1,4 @@
-import { fieldAccess, findStep, isEditable, normalizeRow, normalizeValue, type FieldDef } from '@flux/process-schema';
+import { fieldAccess, findStep, isEditable, normalizeRow, normalizeValue, truthy, type FieldDef } from '@flux/process-schema';
 import type { FastifyInstance } from 'fastify';
 import { ACL_CONDITION, aclParams, grant, requireView } from '../access/policy.js';
 import { userOf } from '../app.js';
@@ -85,7 +85,14 @@ async function checklistView(instanceId: string, checklistKey: string) {
     [instanceId, checklistKey],
   );
   if (!tpl) throw notFound('Lista de verificare');
-  const items = await query(pool, `select id, position, code, question, legal_basis, observation_required_on from checklist_item where template_id = $1 order by position`, [tpl.id]);
+  const items = await query(pool, `select id, position, code, question, legal_basis, observation_required_on, section, hint, applies_when from checklist_item where template_id = $1 order by position`, [tpl.id]);
+  // Items with a condition (visit type, kind of project) apply only when it holds on the dossier's data.
+  const data = items.some((i) => i.applies_when !== null)
+    ? {
+        fields: (await loadFields(pool, instanceId)).values,
+        project: await maybeOne(pool, `select p.* from project p join instance i on i.project_id = p.id where i.id = $1`, [instanceId]),
+      }
+    : null;
   const responses = await query(
     pool,
     `select r.item_id, r.verifier_role, r.answer, r.observation, r.answered_at, u.full_name as answered_by
@@ -102,6 +109,9 @@ async function checklistView(instanceId: string, checklistKey: string) {
       question: i.question,
       legalBasis: i.legal_basis,
       observationRequiredOn: i.observation_required_on,
+      section: i.section,
+      hint: i.hint,
+      applies: i.applies_when === null || truthy(i.applies_when, data),
       responses: Object.fromEntries(
         responses.filter((r) => r.item_id === i.id).map((r) => [r.verifier_role, { answer: r.answer, observation: r.observation, answeredBy: r.answered_by, answeredAt: r.answered_at }]),
       ),

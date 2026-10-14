@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { validateDefinition } from '@flux/process-schema';
 import { proposedRomanianHolidays } from '@flux/working-days';
@@ -90,12 +91,66 @@ export const NOMENCLATURES: Record<string, { name: string; items: Array<[string,
     items: [['comisie', 'Numire comisie / echipă'], ['procedura', 'Aprobare procedură / regulament'], ['delegare', 'Delegare de atribuții'], ['personal', 'Resurse umane'], ['altele', 'Altele']],
   },
   visit_reason: {
-    name: 'Motivul vizitei la fața locului',
-    items: [['esantion_risc', 'Eșantion – risc ridicat'], ['esantion_aleator', 'Eșantion – selecție aleatorie'], ['cerere_finala', 'Înaintea cererii de plată finale'], ['monitorizare', 'Vizită de monitorizare'], ['suspiciune', 'Suspiciune / sesizare']],
+    name: 'Tipul vizitei la fața locului',
+    items: [
+      ['planificata', 'Planificată (plan anual, pe bază de risc)'],
+      ['esantion_risc', 'Eșantion – risc ridicat'],
+      ['esantion_aleator', 'Eșantion – selecție aleatorie'],
+      ['monitorizare', 'Monitorizarea activităților în derulare'],
+      ['ad_hoc', 'Ad-hoc / inopinată (fără notificare prealabilă)'],
+      ['suspiciune', 'Sesizare / suspiciune (fără notificare prealabilă)'],
+      ['incrucisata', 'Încrucișată (dublă finanțare)'],
+      ['cerere_finala', 'La cererea de rambursare finală'],
+      ['ex_post', 'Ex-post (durabilitate)'],
+    ],
   },
   visit_result: {
     name: 'Rezultatul vizitei',
     items: [['conform', 'Conform'], ['conform_cu_recomandari', 'Conform, cu recomandări'], ['neconform', 'Neconform – se sesizează nereguli']],
+  },
+  visit_project_kind: {
+    name: 'Tipul investiției verificate',
+    items: [
+      ['lucrari', 'Investiție cu lucrări de construcții'],
+      ['echipamente', 'Achiziție de echipamente / dotări'],
+      ['servicii', 'Servicii, software, studii'],
+      ['eficienta_energetica', 'Eficiență energetică – clădiri publice'],
+    ],
+  },
+  visit_team_role: {
+    name: 'Calitatea în echipa de verificare',
+    items: [['ofiter_monitorizare', 'Ofițer de monitorizare'], ['expert_achizitii', 'Expert achiziții'], ['ofiter_autorizare_plati', 'Ofițer autorizare plăți'], ['alt_expert', 'Alt expert']],
+  },
+  equipment_status: {
+    name: 'Constatare privind echipamentul',
+    items: [['conform', 'Găsit, conform'], ['serie_diferita', 'Serie diferită'], ['nefunctional', 'Nefuncțional / neutilizat'], ['mutat', 'Mutat din locul declarat'], ['lipsa', 'Lipsă']],
+  },
+  recommendation_status: {
+    name: 'Stadiul recomandării',
+    items: [['implementata', 'Implementată'], ['partial', 'Parțial implementată'], ['in_termen', 'În termen'], ['neimplementata', 'Neimplementată (termen depășit)']],
+  },
+  verification_method: {
+    name: 'Metoda de verificare',
+    items: [['integral', 'Integral (100%)'], ['esantion', 'Pe eșantion']],
+  },
+  deviation_type: {
+    name: 'Natura abaterilor',
+    items: [
+      ['fara_abateri', 'Fără abateri'],
+      ['intarziere', 'Întârziere în implementare'],
+      ['abatere_procedurala', 'Abatere de la contract / procedură (remediabilă)'],
+      ['suspiciune_neregula', 'Suspiciune de neregulă (OUG 66/2011)'],
+      ['suspiciune_frauda', 'Suspiciune de fraudă'],
+    ],
+  },
+  escalation_level: {
+    name: 'Nivelul de monitorizare',
+    items: [
+      ['sprijin', '1. Sprijin (notificare, act adițional, grafic revizuit)'],
+      ['monitorizare_consolidata', '2. Monitorizare consolidată (justificare scrisă, întâlniri tehnice și pe teren)'],
+      ['masuri_corective', '3. Măsuri corective (întreruperea termenului de plată, respingeri, penalități până la 5%, suspendare)'],
+      ['reziliere', '4. Reziliere (OUG 133/2021, art. 37–38)'],
+    ],
   },
   correspondence_category: {
     name: 'Categorie corespondență',
@@ -111,17 +166,70 @@ export interface BaseSeedInput {
   adminPassword: string;
 }
 
-async function installTemplates(db: Db, orgId: string, adminId: string) {
+/**
+ * Installs the built-in templates, and upgrades them when the product ships a new version. A
+ * template the institution uploaded itself (no source hash, or a later version) is never replaced.
+ */
+async function installTemplates(db: Db, orgId: string, adminId: string, log: (m: string) => void) {
   for (const [key, t] of Object.entries(TEMPLATES)) {
-    const exists = await maybeOne(db, `select 1 from document_template where organization_id = $1 and key = $2`, [orgId, key]);
-    if (exists) continue;
+    const hash = createHash('sha256').update(canonical(t)).digest('hex');
+    const current = await maybeOne(
+      db,
+      `select id, version, source_hash from document_template where organization_id = $1 and key = $2 and status = 'published' order by version desc limit 1`,
+      [orgId, key],
+    );
+    const builtIn = current && (current.source_hash !== null || current.version === 1);
+    if (current && (!builtIn || current.source_hash === hash)) continue;
+    const { next } = await one(db, `select coalesce(max(version), 0) + 1 as next from document_template where organization_id = $1 and key = $2`, [orgId, key]);
     const stored = await putFile(buildDocx(t.blocks));
+    await query(db, `update document_template set status = 'retired' where organization_id = $1 and key = $2 and status = 'published'`, [orgId, key]);
     await query(
       db,
-      `insert into document_template (organization_id, key, version, name, storage_key, sha256, status, created_by) values ($1, $2, 1, $3, $4, $5, 'published', $6)`,
-      [orgId, key, t.name, stored.storageKey, stored.sha256, adminId],
+      `insert into document_template (organization_id, key, version, name, storage_key, sha256, status, created_by, source_hash) values ($1, $2, $3, $4, $5, $6, 'published', $7, $8)`,
+      [orgId, key, next, t.name, stored.storageKey, stored.sha256, adminId, hash],
+    );
+    if (current) log(`template ${key} v${next}`);
+  }
+}
+
+/** Installs a checklist, or publishes a new version when its items changed (dossiers keep the version they started with). */
+async function installChecklist(db: Db, orgId: string, c: any, log: (m: string) => void) {
+  const items = c.items.map((i: any) => ({
+    code: i.code,
+    question: i.question,
+    legalBasis: i.legalBasis ?? null,
+    observationRequiredOn: i.observationRequiredOn ?? ['NU'],
+    section: i.section ?? null,
+    hint: i.hint ?? null,
+    appliesWhen: i.appliesWhen ?? null,
+  }));
+  const current = await maybeOne(
+    db,
+    `select t.id, t.version, t.name, t.answer_set,
+            (select coalesce(jsonb_agg(jsonb_build_object('code', code, 'question', question, 'legalBasis', legal_basis, 'observationRequiredOn', to_jsonb(observation_required_on),
+                     'section', section, 'hint', hint, 'appliesWhen', applies_when) order by position), '[]') from checklist_item where template_id = t.id) as items
+       from checklist_template t where organization_id = $1 and key = $2 and status = 'published' order by version desc limit 1`,
+    [orgId, c.key],
+  );
+  if (current && canonical({ n: current.name, a: current.answer_set, i: current.items }) === canonical({ n: c.name, a: c.answerSet, i: items })) return;
+  const { next } = await one(db, `select coalesce(max(version), 0) + 1 as next from checklist_template where organization_id = $1 and key = $2`, [orgId, c.key]);
+  await query(db, `update checklist_template set status = 'retired' where organization_id = $1 and key = $2 and status = 'published'`, [orgId, c.key]);
+  const t = await one(db, `insert into checklist_template (organization_id, key, version, name, answer_set, status) values ($1, $2, $3, $4, $5, 'published') returning id`, [
+    orgId,
+    c.key,
+    next,
+    c.name,
+    c.answerSet,
+  ]);
+  let pos = 1;
+  for (const i of items) {
+    await query(
+      db,
+      `insert into checklist_item (template_id, position, code, question, legal_basis, observation_required_on, section, hint, applies_when) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [t.id, pos++, i.code, i.question, i.legalBasis, i.observationRequiredOn, i.section, i.hint, i.appliesWhen === null ? null : JSON.stringify(i.appliesWhen)],
     );
   }
+  if (current) log(`checklist ${c.key} v${next}`);
 }
 
 /** JSON with object keys sorted: jsonb does not keep key order, so a plain stringify would always differ. */
@@ -138,30 +246,11 @@ function canonical(v: unknown): string {
 
 /** Installs or upgrades the process packages: publishes a new version only when the JSON changed. */
 export async function installPackages(db: Db, orgId: string, adminId: string, log: (m: string) => void = () => undefined) {
-  await installTemplates(db, orgId, adminId);
+  await installTemplates(db, orgId, adminId, log);
   for (const dir of readdirSync(PROCESSES_DIR).sort()) {
     const base = `${PROCESSES_DIR}${dir}/`;
-    if (existsSync(`${base}checklist.json`)) {
-      const c = JSON.parse(readFileSync(`${base}checklist.json`, 'utf8'));
-      const current = await maybeOne(db, `select id from checklist_template where organization_id = $1 and key = $2`, [orgId, c.key]);
-      if (!current) {
-        const t = await one(
-          db,
-          `insert into checklist_template (organization_id, key, version, name, answer_set, status) values ($1, $2, 1, $3, $4, 'published') returning id`,
-          [orgId, c.key, c.name, c.answerSet],
-        );
-        let pos = 1;
-        for (const i of c.items) {
-          await query(db, `insert into checklist_item (template_id, position, code, question, legal_basis, observation_required_on) values ($1, $2, $3, $4, $5, $6)`, [
-            t.id,
-            pos++,
-            i.code,
-            i.question,
-            i.legalBasis ?? null,
-            i.observationRequiredOn ?? ['NU'],
-          ]);
-        }
-      }
+    for (const file of readdirSync(base).filter((f) => /^checklist.*\.json$/.test(f)).sort()) {
+      await installChecklist(db, orgId, JSON.parse(readFileSync(`${base}${file}`, 'utf8')), log);
     }
     const def = JSON.parse(readFileSync(`${base}process.json`, 'utf8'));
     const v = validateDefinition(def);

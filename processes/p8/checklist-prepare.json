@@ -1,0 +1,111 @@
+{
+  "key": "p8_prepare",
+  "name": "Pregătirea vizitei pe teren",
+  "answerSet": [
+    "DA",
+    "NU",
+    "NA"
+  ],
+  "items": [
+    {
+      "code": "P.1",
+      "section": "Pregătirea vizitei",
+      "question": "Scopul vizitei este stabilit, iar decizia / notificarea este emisă?"
+    },
+    {
+      "code": "P.2",
+      "section": "Pregătirea vizitei",
+      "question": "Beneficiarul a fost notificat prin MySMIS (data, ora, participanții, documentele de pus la dispoziție)?",
+      "appliesWhen": {
+        "!": {
+          "in": [
+            {
+              "var": "fields.visit_reason"
+            },
+            [
+              "ad_hoc",
+              "suspiciune"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "code": "P.3",
+      "section": "Pregătirea vizitei",
+      "question": "Am studiat contractul de finanțare, actele adiționale și notificările?"
+    },
+    {
+      "code": "P.4",
+      "section": "Pregătirea vizitei",
+      "question": "Am studiat cererea de finanțare: activitățile, bugetul, locul, echipamentele și indicatorii?"
+    },
+    {
+      "code": "P.5",
+      "section": "Pregătirea vizitei",
+      "question": "Am identificat în planul de monitorizare indicatorii de etapă scadenți?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "P.6",
+      "section": "Pregătirea vizitei",
+      "question": "Am analizat ultimele rapoarte de progres (ce a declarat beneficiarul)?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "P.7",
+      "section": "Pregătirea vizitei",
+      "question": "Am extras recomandările vizitei anterioare și termenele lor?",
+      "observationRequiredOn": [
+        "NU"
+      ]
+    },
+    {
+      "code": "P.8",
+      "section": "Pregătirea vizitei",
+      "question": "Am extras din MySMIS contractele de achiziție, situațiile de lucrări și facturile?"
+    },
+    {
+      "code": "P.9",
+      "section": "Pregătirea vizitei",
+      "question": "Am întocmit lista echipamentelor (denumire, cantitate, serie, amplasare) din facturi și procese-verbale de recepție?"
+    },
+    {
+      "code": "P.10",
+      "section": "Pregătirea vizitei",
+      "question": "Am stabilit metoda de verificare: integral (100%) sau pe eșantion?"
+    },
+    {
+      "code": "P.11",
+      "section": "Pregătirea vizitei",
+      "question": "Logistica este asigurată: ordin de deplasare, echipament de protecție, telefon cu data și locația activate, ruletă / telemetru?"
+    },
+    {
+      "code": "P.12",
+      "section": "Pregătirea vizitei",
+      "question": "Am verificat rapoartele de durabilitate și veniturile nete raportate?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    }
+  ]
+}

@@ -377,6 +377,10 @@
               "total": {
                 "type": "boolean"
               },
+              "currency": {
+                "type": "boolean",
+                "description": "amount column: false for quantities (shown without „lei”)"
+              },
               "resultType": {
                 "enum": [
                   "amount",

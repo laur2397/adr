@@ -383,13 +383,13 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get('/admin/checklist-templates', async (req) => {
     const user = userOf(req);
     const rows = await query(getPool(), `select id, key, version, name, status, answer_set from checklist_template where organization_id = $1 order by key, version desc`, [user.organizationId]);
-    const items = await query(getPool(), `select template_id, position, code, question, legal_basis, observation_required_on from checklist_item where template_id = any($1::uuid[]) order by position`, [
+    const items = await query(getPool(), `select template_id, position, code, question, legal_basis, observation_required_on, section, hint, applies_when from checklist_item where template_id = any($1::uuid[]) order by position`, [
       rows.map((r) => r.id),
     ]);
     return { items: rows.map((r) => ({ ...r, items: items.filter((i) => i.template_id === r.id) })) };
   });
 
-  app.post<{ Body: { key: string; name: string; answerSet?: string[]; items: Array<{ code: string; question: string; legalBasis?: string; observationRequiredOn?: string[] }>; publish?: boolean } }>(
+  app.post<{ Body: { key: string; name: string; answerSet?: string[]; items: Array<{ code: string; question: string; legalBasis?: string; observationRequiredOn?: string[]; section?: string; hint?: string; appliesWhen?: unknown }>; publish?: boolean } }>(
     '/admin/checklist-templates',
     async (req, reply) => {
       const user = userOf(req);
@@ -406,14 +406,11 @@ export async function adminRoutes(app: FastifyInstance) {
         );
         let pos = 1;
         for (const i of b.items) {
-          await query(db, `insert into checklist_item (template_id, position, code, question, legal_basis, observation_required_on) values ($1, $2, $3, $4, $5, $6)`, [
-            t.id,
-            pos++,
-            i.code,
-            i.question,
-            i.legalBasis ?? null,
-            i.observationRequiredOn ?? ['NU'],
-          ]);
+          await query(
+            db,
+            `insert into checklist_item (template_id, position, code, question, legal_basis, observation_required_on, section, hint, applies_when) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [t.id, pos++, i.code, i.question, i.legalBasis ?? null, i.observationRequiredOn ?? ['NU'], i.section ?? null, i.hint ?? null, i.appliesWhen ? JSON.stringify(i.appliesWhen) : null],
+          );
         }
         await audit(db, actorOf(user), { action: 'checklist_template.create', entityType: 'checklist_template', entityId: t.id, newValue: { key: b.key, version: next, items: b.items.length } });
         return t;

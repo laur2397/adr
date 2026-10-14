@@ -9,7 +9,7 @@ export interface FieldView {
   resultType: string | null;
   format: string | null;
   nomenclature: string | null;
-  columns: Array<{ key: string; label: string; type: string; nomenclature?: string; total?: boolean; resultType?: string }> | null;
+  columns: Array<{ key: string; label: string; type: string; nomenclature?: string; total?: boolean; resultType?: string; currency?: boolean }> | null;
   access: 'visible' | 'editable' | 'required';
   value: unknown;
   source: string | null;

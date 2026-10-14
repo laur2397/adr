@@ -1,6 +1,6 @@
 /**
  * Offline support for on-site visits. The field page keeps, per dossier, a copy of the dossier and
- * a queue of changes (fields, checklist answers, photos, signature) in IndexedDB. Changes are sent
+ * a queue of changes (fields, tables, checklist answers, photos, signature) in IndexedDB. Changes are sent
  * in order when the device is online; a photo has a client id, so a re-send after a dropped
  * connection is recognized by the server and not duplicated.
  */
@@ -10,13 +10,14 @@ const DB_VERSION = 1;
 
 export type QueuedOp =
   | { id?: number; instanceId: string; kind: 'fields'; taskId: string; fields: Record<string, unknown>; createdAt: string; error?: string }
+  | { id?: number; instanceId: string; kind: 'list'; taskId: string; listKey: string; rows: Array<Record<string, unknown>>; createdAt: string; error?: string }
   | { id?: number; instanceId: string; kind: 'checklist'; taskId: string; checklistKey: string; responses: Array<{ code: string; answer: string | null; observation: string | null }>; createdAt: string; error?: string }
   | {
       id?: number;
       instanceId: string;
       kind: 'evidence';
       blob: Blob;
-      meta: { kind: 'photo' | 'signature'; clientId: string; caption?: string; takenAt: string; latitude?: number; longitude?: number; accuracy?: number; signerName?: string };
+      meta: { kind: 'photo' | 'signature'; clientId: string; caption?: string; section?: string; takenAt: string; latitude?: number; longitude?: number; accuracy?: number; signerName?: string };
       createdAt: string;
       error?: string;
     };
@@ -49,6 +50,11 @@ export interface FieldSnapshot {
   dossier: any;
   evidence: any[];
   results: Array<{ code: string; label: string }>;
+  /** Code lists used on the page (equipment status, recommendation status…), for working without signal. */
+  nomenclatures?: Record<string, Array<{ code: string; label: string }>>;
+  /** Earlier visits to the same project: recommendations and photos (kept as files, to compare angles offline). */
+  context?: { project: any; previous: any[] };
+  previousPhotos?: Record<string, Blob>;
   savedAt: string;
 }
 
@@ -60,15 +66,21 @@ export async function pending(instanceId: string): Promise<QueuedOp[]> {
   return all.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 }
 
-/** Adds a change. Field and checklist changes replace a not-yet-sent change of the same kind. */
+/** Adds a change. A not-yet-sent change of the same field set, table or checklist is replaced (fields are merged). */
 export async function enqueue(op: QueuedOp): Promise<void> {
-  if (op.kind === 'fields' || op.kind === 'checklist') {
-    const prev = (await pending(op.instanceId)).find((p) => p.kind === op.kind && !p.error);
+  if (op.kind !== 'evidence') {
+    const prev = (await pending(op.instanceId)).find(
+      (p) =>
+        !p.error &&
+        p.kind === op.kind &&
+        (p.kind !== 'list' || p.listKey === (op as Extract<QueuedOp, { kind: 'list' }>).listKey) &&
+        (p.kind !== 'checklist' || p.checklistKey === (op as Extract<QueuedOp, { kind: 'checklist' }>).checklistKey),
+    );
     if (prev && prev.kind === 'fields' && op.kind === 'fields') {
       await store('queue', 'readwrite', (st) => st.put({ ...prev, fields: { ...prev.fields, ...op.fields }, taskId: op.taskId }));
       return;
     }
-    if (prev && prev.kind === 'checklist' && op.kind === 'checklist') {
+    if (prev) {
       await store('queue', 'readwrite', (st) => st.put({ ...op, id: prev.id }));
       return;
     }
@@ -88,6 +100,12 @@ async function send(op: QueuedOp): Promise<void> {
         method: 'PATCH',
         headers: { 'content-type': 'application/json', 'x-flux-csrf': '1' },
         body: JSON.stringify({ taskId: op.taskId, fields: op.fields }),
+      });
+    } else if (op.kind === 'list') {
+      res = await fetch(`/api/v1/instances/${op.instanceId}/lists/${op.listKey}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', 'x-flux-csrf': '1' },
+        body: JSON.stringify({ taskId: op.taskId, rows: op.rows }),
       });
     } else if (op.kind === 'checklist') {
       res = await fetch(`/api/v1/instances/${op.instanceId}/checklists/${op.checklistKey}/responses`, {

@@ -17,6 +17,7 @@ export interface EvidenceRow {
   width: number | null;
   height: number | null;
   caption: string | null;
+  section: string | null;
   signer_name: string | null;
   taken_at: string | null;
   latitude: string | null;
@@ -30,7 +31,7 @@ export interface EvidenceRow {
 export async function listEvidence(db: Db, instanceId: string): Promise<EvidenceRow[]> {
   return query(
     db,
-    `select e.id, e.kind, e.storage_key, encode(e.sha256, 'hex') as sha256, e.mime_type, e.width, e.height, e.caption, e.signer_name,
+    `select e.id, e.kind, e.storage_key, encode(e.sha256, 'hex') as sha256, e.mime_type, e.width, e.height, e.caption, e.section, e.signer_name,
             e.taken_at, e.latitude, e.longitude, e.accuracy_m, e.captured_by, u.full_name as captured_by_name, e.created_at
        from visit_evidence e join app_user u on u.id = e.captured_by
       where e.instance_id = $1 and e.deleted_at is null
@@ -140,7 +141,7 @@ export async function appendEvidenceAnnex(docx: Buffer, items: EvidenceRow[]): P
   for (const p of photos) {
     i += 1;
     xml += await add(p, 15, 10.5);
-    xml += para(`Foto ${i}${p.caption ? ` – ${p.caption}` : ''}`, { bold: true, size: 18, center: true, keepNext: true, after: 0 });
+    xml += para(`Foto ${i}${p.section ? ` · ${p.section}` : ''}${p.caption ? ` – ${p.caption}` : ''}`, { bold: true, size: 18, center: true, keepNext: true, after: 0 });
     xml += para(`${when(p.taken_at)} · ${where(p)} · ${p.captured_by_name} · SHA-256 ${p.sha256.slice(0, 16)}…`, { size: 16, center: true, after: 240 });
   }
   if (signature) {

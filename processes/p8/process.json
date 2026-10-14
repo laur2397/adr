@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "key": "p8_onsite_verification",
   "name": "Verificare la fața locului",
-  "description": "Pachetul P8: verificarea la fața locului a unei operațiuni (art. 74 alin. 2 din Regulamentul (UE) 2021/1060): programare din eșantion sau la cerere, notificarea beneficiarului, vizita cu listă de verificare, fotografii cu poziție GPS și semnătura reprezentantului, raport avizat și aprobat, urmărirea recomandărilor și, la nevoie, sesizarea unei nereguli.",
+  "description": "Pachetul P8: vizita pe teren a ofițerului de monitorizare (art. 74 din Regulamentul (UE) 2021/1060, OUG 23/2023 art. 14, Anexa 6 la Ordinul MIPE 1777/2023): programare (planificată, de monitorizare, ad-hoc fără notificare, încrucișată, la cererea finală, ex-post), pregătire (dosar, echipamente, riscuri), verificare pe secțiunile Anexei 6 cu fotografii GPS și semnătura reprezentantului, raport în 10 zile lucrătoare avizat și aprobat, urmărirea recomandărilor și escaladare.",
   "subject": {
     "requires": [
       "project",
@@ -38,10 +38,30 @@
       }
     },
     {
+      "key": "contract_number",
+      "label": "Contract de finanțare nr.",
+      "type": "text",
+      "prefill": {
+        "from": "project",
+        "path": "contract_number"
+      }
+    },
+    {
       "key": "visit_reason",
-      "label": "Motivul vizitei",
+      "label": "Tipul vizitei",
       "type": "choice",
       "nomenclature": "visit_reason"
+    },
+    {
+      "key": "project_kind",
+      "label": "Tipul investiției verificate",
+      "type": "choice",
+      "nomenclature": "visit_project_kind"
+    },
+    {
+      "key": "visit_scope",
+      "label": "Scopul vizitei",
+      "type": "textarea"
     },
     {
       "key": "sampled_reference",
@@ -64,13 +84,317 @@
       "type": "text"
     },
     {
+      "key": "notice_documents",
+      "label": "Documente pe care beneficiarul le pune la dispoziție",
+      "type": "textarea",
+      "prefill": {
+        "from": "constant",
+        "value": "Originalele contractelor de achiziție și ale actelor adiționale, facturile și procesele-verbale de recepție, situațiile de lucrări, autorizația de construire și ordinul de începere, jurnalul de șantier, documentele de personal (decizii, fișe de post, pontaje), evidența contabilă analitică a proiectului."
+      }
+    },
+    {
+      "key": "visibility_requirement",
+      "label": "Cerința de vizibilitate pentru acest proiect",
+      "type": "calculated",
+      "resultType": "text",
+      "formula": {
+        "if": [
+          {
+            "amount_gte": [
+              {
+                "var": "project.total_value"
+              },
+              "49700000"
+            ]
+          },
+          "Operațiune > 10 mil. EUR: panou/plăcuță permanentă, plus eveniment de comunicare (inaugurare), materiale foto/video, campanie și clip final, conform planului de comunicare",
+          {
+            "and": [
+              {
+                "amount_gte": [
+                  {
+                    "var": "project.total_value"
+                  },
+                  "2485000"
+                ]
+              },
+              {
+                "in": [
+                  {
+                    "var": "fields.project_kind"
+                  },
+                  [
+                    "lucrari",
+                    "eficienta_energetica"
+                  ]
+                ]
+              }
+            ]
+          },
+          "Infrastructură > 500.000 EUR: panou temporar de min. 2 × 1,5 m pe durata lucrărilor, apoi plăcuță/panou permanent de min. 0,8 × 0,5 m (drumuri județene: cel puțin 3 panouri cu două fețe)",
+          {
+            "amount_gte": [
+              {
+                "var": "project.total_value"
+              },
+              "2485000"
+            ]
+          },
+          "Bunuri / servicii > 500.000 EUR: panou sau plăcuță permanentă de min. 0,8 × 0,5 m, la loc vizibil",
+          "Sub 500.000 EUR: cel puțin un afiș A3 sau un afișaj electronic echivalent, la loc vizibil publicului"
+        ]
+      }
+    },
+    {
+      "key": "team",
+      "label": "Echipa de verificare",
+      "type": "line_items",
+      "columns": [
+        {
+          "key": "name",
+          "label": "Nume și prenume",
+          "type": "text"
+        },
+        {
+          "key": "role",
+          "label": "Calitatea",
+          "type": "choice",
+          "nomenclature": "visit_team_role"
+        }
+      ]
+    },
+    {
+      "key": "declared_progress",
+      "label": "Ce a declarat beneficiarul (ultimul raport de progres)",
+      "type": "textarea"
+    },
+    {
+      "key": "stage_indicators_due",
+      "label": "Indicatori de etapă scadenți (planul de monitorizare)",
+      "type": "textarea"
+    },
+    {
+      "key": "main_risk",
+      "label": "Unde este riscul cel mai mare (ce verific cu prioritate)",
+      "type": "textarea"
+    },
+    {
+      "key": "equipment",
+      "label": "Echipamente de verificat",
+      "type": "line_items",
+      "columns": [
+        {
+          "key": "item",
+          "label": "Denumire",
+          "type": "text"
+        },
+        {
+          "key": "quantity",
+          "label": "Cant.",
+          "type": "integer"
+        },
+        {
+          "key": "serial_expected",
+          "label": "Seria din factură / PV",
+          "type": "text"
+        },
+        {
+          "key": "invoice",
+          "label": "Factura / PV recepție",
+          "type": "text"
+        },
+        {
+          "key": "placement",
+          "label": "Amplasare",
+          "type": "text"
+        },
+        {
+          "key": "status",
+          "label": "Constatare",
+          "type": "choice",
+          "nomenclature": "equipment_status"
+        },
+        {
+          "key": "serial_found",
+          "label": "Seria găsită",
+          "type": "text"
+        },
+        {
+          "key": "observation",
+          "label": "Observații",
+          "type": "text"
+        }
+      ],
+      "rowValidations": [
+        {
+          "rule": {
+            "or": [
+              {
+                "!": {
+                  "var": "row.status"
+                }
+              },
+              {
+                "==": [
+                  {
+                    "var": "row.status"
+                  },
+                  "conform"
+                ]
+              },
+              {
+                "!!": {
+                  "var": "row.observation"
+                }
+              }
+            ]
+          },
+          "message": "un echipament care nu este conform are nevoie de observații."
+        }
+      ]
+    },
+    {
+      "key": "works_sampling",
+      "label": "Măsurători prin sondaj (situații de lucrări)",
+      "type": "line_items",
+      "columns": [
+        {
+          "key": "position",
+          "label": "Poziția",
+          "type": "text"
+        },
+        {
+          "key": "description",
+          "label": "Descriere",
+          "type": "text"
+        },
+        {
+          "key": "unit",
+          "label": "UM",
+          "type": "text"
+        },
+        {
+          "key": "qty_paid",
+          "label": "Cantitate decontată",
+          "type": "amount",
+          "currency": false
+        },
+        {
+          "key": "qty_measured",
+          "label": "Cantitate măsurată",
+          "type": "amount",
+          "currency": false
+        },
+        {
+          "key": "difference",
+          "label": "Diferență %",
+          "type": "calculated",
+          "resultType": "percent",
+          "formula": {
+            "if": [
+              {
+                ">": [
+                  {
+                    "var": "row.qty_paid"
+                  },
+                  0
+                ]
+              },
+              {
+                "round": [
+                  {
+                    "*": [
+                      {
+                        "/": [
+                          {
+                            "-": [
+                              {
+                                "var": "row.qty_measured"
+                              },
+                              {
+                                "var": "row.qty_paid"
+                              }
+                            ]
+                          },
+                          {
+                            "var": "row.qty_paid"
+                          }
+                        ]
+                      },
+                      100
+                    ]
+                  },
+                  1
+                ]
+              },
+              null
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "previous_recommendations",
+      "label": "Recomandările vizitei anterioare",
+      "type": "line_items",
+      "prefill": {
+        "from": "previous_instance",
+        "path": "recommendations"
+      },
+      "columns": [
+        {
+          "key": "recommendation",
+          "label": "Recomandarea",
+          "type": "text"
+        },
+        {
+          "key": "deadline",
+          "label": "Termen",
+          "type": "date"
+        },
+        {
+          "key": "evidence_required",
+          "label": "Dovada cerută",
+          "type": "text"
+        },
+        {
+          "key": "status",
+          "label": "Stadiu constatat",
+          "type": "choice",
+          "nomenclature": "recommendation_status"
+        },
+        {
+          "key": "observation",
+          "label": "Observații",
+          "type": "text"
+        }
+      ]
+    },
+    {
       "key": "visit_date",
       "label": "Data vizitei",
       "type": "date"
     },
     {
+      "key": "beneficiary_participants",
+      "label": "Participanți din partea beneficiarului",
+      "type": "line_items",
+      "columns": [
+        {
+          "key": "name",
+          "label": "Nume și prenume",
+          "type": "text"
+        },
+        {
+          "key": "function",
+          "label": "Funcția",
+          "type": "text"
+        }
+      ]
+    },
+    {
       "key": "representative",
-      "label": "Reprezentantul beneficiarului prezent",
+      "label": "Reprezentantul beneficiarului care semnează",
       "type": "text"
     },
     {
@@ -79,9 +403,141 @@
       "type": "text"
     },
     {
-      "key": "findings",
-      "label": "Constatări",
+      "key": "documents_checked",
+      "label": "Documente verificate și metoda",
+      "type": "line_items",
+      "prefill": {
+        "from": "constant",
+        "value": [
+          {
+            "document": "Contractul de finanțare și actele adiționale",
+            "method": null
+          },
+          {
+            "document": "Contractele de achiziție, actele adiționale și garanțiile de bună execuție",
+            "method": null
+          },
+          {
+            "document": "Facturi și procese-verbale de recepție",
+            "method": null
+          },
+          {
+            "document": "Situații de lucrări",
+            "method": null
+          },
+          {
+            "document": "Autorizația de construire, ordinul de începere, jurnalul de șantier",
+            "method": null
+          },
+          {
+            "document": "Documente de personal (decizii, fișe de post, pontaje)",
+            "method": null
+          },
+          {
+            "document": "Evidența contabilă analitică a proiectului",
+            "method": null
+          }
+        ]
+      },
+      "columns": [
+        {
+          "key": "document",
+          "label": "Documentul",
+          "type": "text"
+        },
+        {
+          "key": "method",
+          "label": "Metoda",
+          "type": "choice",
+          "nomenclature": "verification_method"
+        },
+        {
+          "key": "observation",
+          "label": "Observații",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "key": "contract_findings",
+      "label": "1. Modificări ale contractului de finanțare",
       "type": "textarea"
+    },
+    {
+      "key": "procurement_findings",
+      "label": "2.1 Contracte de achiziție",
+      "type": "textarea"
+    },
+    {
+      "key": "stage_findings",
+      "label": "2.2 Stadiul activităților față de grafic și raportul de progres",
+      "type": "textarea"
+    },
+    {
+      "key": "indicators_findings",
+      "label": "2.3 și 3. Indicatori (realizare, rezultat, de etapă)",
+      "type": "textarea"
+    },
+    {
+      "key": "equipment_findings",
+      "label": "2.4 Echipamente",
+      "type": "textarea"
+    },
+    {
+      "key": "works_findings",
+      "label": "2.5 Lucrări și autorizația de construire",
+      "type": "textarea"
+    },
+    {
+      "key": "deliverables_findings",
+      "label": "2.6–2.7 Livrabile și resurse umane",
+      "type": "textarea"
+    },
+    {
+      "key": "payments_findings",
+      "label": "4. Graficul cererilor de prefinanțare / plată / rambursare",
+      "type": "textarea"
+    },
+    {
+      "key": "durability_findings",
+      "label": "II. Durabilitate (post-implementare)",
+      "type": "textarea"
+    },
+    {
+      "key": "management_findings",
+      "label": "6. Managementul proiectului",
+      "type": "textarea"
+    },
+    {
+      "key": "horizontal_findings",
+      "label": "7. Principii orizontale",
+      "type": "textarea"
+    },
+    {
+      "key": "visibility_findings",
+      "label": "8. Informare și vizibilitate",
+      "type": "textarea"
+    },
+    {
+      "key": "other_findings",
+      "label": "9. Alte aspecte, abateri și măsuri",
+      "type": "textarea"
+    },
+    {
+      "key": "risks",
+      "label": "10. Riscuri și probleme identificate",
+      "type": "textarea"
+    },
+    {
+      "key": "findings",
+      "label": "11. Concluzii",
+      "type": "textarea"
+    },
+    {
+      "key": "deviation_type",
+      "label": "Natura abaterilor constatate",
+      "type": "choice",
+      "nomenclature": "deviation_type"
     },
     {
       "key": "result",
@@ -91,13 +547,71 @@
     },
     {
       "key": "recommendations",
-      "label": "Recomandări către beneficiar",
+      "label": "12. Recomandări / plan de acțiune",
+      "type": "line_items",
+      "columns": [
+        {
+          "key": "recommendation",
+          "label": "Recomandarea (concretă, măsurabilă)",
+          "type": "text"
+        },
+        {
+          "key": "deadline",
+          "label": "Termen",
+          "type": "date"
+        },
+        {
+          "key": "evidence_required",
+          "label": "Dovada cerută",
+          "type": "text"
+        },
+        {
+          "key": "status",
+          "label": "Stadiu",
+          "type": "choice",
+          "nomenclature": "recommendation_status"
+        }
+      ],
+      "rowValidations": [
+        {
+          "rule": {
+            "and": [
+              {
+                "!!": {
+                  "var": "row.recommendation"
+                }
+              },
+              {
+                "!!": {
+                  "var": "row.deadline"
+                }
+              },
+              {
+                "!!": {
+                  "var": "row.evidence_required"
+                }
+              }
+            ]
+          },
+          "message": "fiecare recomandare are text, termen și dovada cerută."
+        }
+      ]
+    },
+    {
+      "key": "beneficiary_position",
+      "label": "Punctul de vedere al beneficiarului",
       "type": "textarea"
     },
     {
-      "key": "recommendations_deadline",
-      "label": "Termen de implementare a recomandărilor",
-      "type": "date"
+      "key": "missing_documents",
+      "label": "Documente de încărcat de beneficiar în MySMIS",
+      "type": "textarea"
+    },
+    {
+      "key": "escalation_level",
+      "label": "Nivelul de monitorizare propus",
+      "type": "choice",
+      "nomenclature": "escalation_level"
     },
     {
       "key": "follow_up_notes",
@@ -106,6 +620,13 @@
     }
   ],
   "checklists": [
+    {
+      "key": "prepare",
+      "template": "p8_prepare",
+      "verifierRoles": [
+        "primary"
+      ]
+    },
     {
       "key": "onsite",
       "template": "p8_onsite",
@@ -163,25 +684,54 @@
       "type": "start",
       "name": "Programarea vizitei",
       "fieldAccess": {
-        "visit_date": "hidden",
-        "representative": "hidden",
-        "representative_role": "hidden",
-        "findings": "hidden",
-        "result": "hidden",
-        "recommendations": "hidden",
-        "recommendations_deadline": "hidden",
-        "follow_up_notes": "hidden",
         "visit_reason": "required",
+        "project_kind": "required",
+        "visit_scope": "required",
         "sampled_reference": "editable",
         "planned_date": "required",
         "location": "required",
-        "beneficiary_contact": "editable"
+        "beneficiary_contact": "editable",
+        "notice_documents": "editable",
+        "team": "hidden",
+        "declared_progress": "hidden",
+        "stage_indicators_due": "hidden",
+        "main_risk": "hidden",
+        "equipment": "hidden",
+        "works_sampling": "hidden",
+        "previous_recommendations": "hidden",
+        "visit_date": "hidden",
+        "beneficiary_participants": "hidden",
+        "representative": "hidden",
+        "representative_role": "hidden",
+        "documents_checked": "hidden",
+        "contract_findings": "hidden",
+        "procurement_findings": "hidden",
+        "stage_findings": "hidden",
+        "indicators_findings": "hidden",
+        "equipment_findings": "hidden",
+        "works_findings": "hidden",
+        "deliverables_findings": "hidden",
+        "payments_findings": "hidden",
+        "durability_findings": "hidden",
+        "management_findings": "hidden",
+        "horizontal_findings": "hidden",
+        "visibility_findings": "hidden",
+        "other_findings": "hidden",
+        "risks": "hidden",
+        "findings": "hidden",
+        "deviation_type": "hidden",
+        "result": "hidden",
+        "recommendations": "hidden",
+        "beneficiary_position": "hidden",
+        "missing_documents": "hidden",
+        "escalation_level": "hidden",
+        "follow_up_notes": "hidden"
       },
       "paths": [
         {
           "key": "schedule",
-          "label": "Programează și notifică beneficiarul",
-          "to": "notify_visit",
+          "label": "Programează vizita",
+          "to": "route_notice",
           "validations": [
             {
               "rule": {
@@ -204,6 +754,47 @@
           "to": "cancelled",
           "kind": "reject",
           "requiresComment": true
+        }
+      ]
+    },
+    {
+      "key": "route_notice",
+      "type": "decision",
+      "name": "Notificare prealabilă?",
+      "paths": [
+        {
+          "key": "unannounced",
+          "label": "Vizită inopinată – fără notificare",
+          "to": "prepare",
+          "visibleWhen": {
+            "in": [
+              {
+                "var": "fields.visit_reason"
+              },
+              [
+                "ad_hoc",
+                "suspiciune"
+              ]
+            ]
+          }
+        },
+        {
+          "key": "notify",
+          "label": "Cu notificare prin MySMIS",
+          "to": "notify_visit",
+          "visibleWhen": {
+            "!": {
+              "in": [
+                {
+                  "var": "fields.visit_reason"
+                },
+                [
+                  "ad_hoc",
+                  "suspiciune"
+                ]
+              ]
+            }
+          }
         }
       ]
     },
@@ -237,14 +828,104 @@
           ]
         }
       ],
-      "next": "visit"
+      "next": "prepare"
+    },
+    {
+      "key": "prepare",
+      "type": "human",
+      "name": "Pregătirea vizitei",
+      "assignment": {
+        "rule": "project_expert",
+        "role": "ei_expert"
+      },
+      "checklist": "prepare",
+      "checklistVerifier": "primary",
+      "fieldAccess": {
+        "visit_reason": "visible",
+        "project_kind": "required",
+        "visit_scope": "visible",
+        "sampled_reference": "visible",
+        "planned_date": "visible",
+        "location": "visible",
+        "beneficiary_contact": "visible",
+        "notice_documents": "visible",
+        "team": "required",
+        "declared_progress": "editable",
+        "stage_indicators_due": "editable",
+        "main_risk": "required",
+        "equipment": "editable",
+        "works_sampling": "editable",
+        "previous_recommendations": "editable",
+        "visit_date": "hidden",
+        "beneficiary_participants": "hidden",
+        "representative": "hidden",
+        "representative_role": "hidden",
+        "documents_checked": "hidden",
+        "contract_findings": "hidden",
+        "procurement_findings": "hidden",
+        "stage_findings": "hidden",
+        "indicators_findings": "hidden",
+        "equipment_findings": "hidden",
+        "works_findings": "hidden",
+        "deliverables_findings": "hidden",
+        "payments_findings": "hidden",
+        "durability_findings": "hidden",
+        "management_findings": "hidden",
+        "horizontal_findings": "hidden",
+        "visibility_findings": "hidden",
+        "other_findings": "hidden",
+        "risks": "hidden",
+        "findings": "hidden",
+        "deviation_type": "hidden",
+        "result": "hidden",
+        "recommendations": "hidden",
+        "beneficiary_position": "hidden",
+        "missing_documents": "hidden",
+        "escalation_level": "hidden",
+        "follow_up_notes": "hidden"
+      },
+      "onEnter": [
+        {
+          "type": "register",
+          "register": "onsite_visits",
+          "direction": "internal",
+          "once": true,
+          "when": {
+            "in": [
+              {
+                "var": "fields.visit_reason"
+              },
+              [
+                "ad_hoc",
+                "suspiciune"
+              ]
+            ]
+          }
+        }
+      ],
+      "paths": [
+        {
+          "key": "ready",
+          "label": "Pregătirea este completă – plec pe teren",
+          "to": "visit",
+          "requiresChecklistComplete": "prepare"
+        },
+        {
+          "key": "reschedule",
+          "label": "Returnează pentru reprogramare",
+          "to": "planning",
+          "kind": "return",
+          "requiresComment": true
+        }
+      ]
     },
     {
       "key": "visit",
       "type": "human",
       "name": "Vizita la fața locului",
       "assignment": {
-        "rule": "project_expert",
+        "rule": "previous_actor",
+        "step": "prepare",
         "role": "ei_expert"
       },
       "deadline": "report",
@@ -253,17 +934,46 @@
       "evidence": true,
       "fieldAccess": {
         "visit_reason": "visible",
+        "project_kind": "visible",
+        "visit_scope": "visible",
+        "sampled_reference": "visible",
         "planned_date": "visible",
         "location": "visible",
         "beneficiary_contact": "visible",
-        "sampled_reference": "visible",
+        "notice_documents": "visible",
+        "team": "editable",
+        "declared_progress": "visible",
+        "stage_indicators_due": "visible",
+        "main_risk": "visible",
+        "equipment": "editable",
+        "works_sampling": "editable",
+        "previous_recommendations": "editable",
         "visit_date": "required",
+        "beneficiary_participants": "required",
         "representative": "required",
         "representative_role": "editable",
+        "documents_checked": "required",
+        "contract_findings": "editable",
+        "procurement_findings": "editable",
+        "stage_findings": "editable",
+        "indicators_findings": "editable",
+        "equipment_findings": "editable",
+        "works_findings": "editable",
+        "deliverables_findings": "editable",
+        "payments_findings": "editable",
+        "durability_findings": "editable",
+        "management_findings": "editable",
+        "horizontal_findings": "editable",
+        "visibility_findings": "editable",
+        "other_findings": "editable",
+        "risks": "editable",
         "findings": "required",
+        "deviation_type": "required",
         "result": "required",
         "recommendations": "editable",
-        "recommendations_deadline": "editable",
+        "beneficiary_position": "editable",
+        "missing_documents": "editable",
+        "escalation_level": "editable",
         "follow_up_notes": "hidden"
       },
       "paths": [
@@ -274,6 +984,7 @@
           "requiresSignatures": [
             "visit_report"
           ],
+          "requiresChecklistComplete": "onsite",
           "validations": [
             {
               "rule": {
@@ -299,6 +1010,91 @@
             },
             {
               "rule": {
+                "none": [
+                  {
+                    "var": "fields.equipment"
+                  },
+                  {
+                    "!": {
+                      "var": "status"
+                    }
+                  }
+                ]
+              },
+              "message": "Completați constatarea pentru fiecare echipament din listă (găsit, serie diferită, nefuncțional, lipsă)."
+            },
+            {
+              "rule": {
+                "none": [
+                  {
+                    "var": "fields.previous_recommendations"
+                  },
+                  {
+                    "!": {
+                      "var": "status"
+                    }
+                  }
+                ]
+              },
+              "message": "Stabiliți stadiul fiecărei recomandări din vizita anterioară (punctul 5)."
+            },
+            {
+              "rule": {
+                "none": [
+                  {
+                    "var": "fields.documents_checked"
+                  },
+                  {
+                    "!": {
+                      "var": "method"
+                    }
+                  }
+                ]
+              },
+              "message": "Indicați metoda de verificare (integral / eșantion) pentru fiecare document (punctul 13)."
+            },
+            {
+              "rule": {
+                "or": [
+                  {
+                    "==": [
+                      {
+                        "var": "fields.visit_reason"
+                      },
+                      "ex_post"
+                    ]
+                  },
+                  {
+                    "!!": {
+                      "var": "fields.stage_findings"
+                    }
+                  }
+                ]
+              },
+              "message": "Descrieți stadiul activităților față de grafic (punctul 2.2)."
+            },
+            {
+              "rule": {
+                "or": [
+                  {
+                    "!=": [
+                      {
+                        "var": "fields.visit_reason"
+                      },
+                      "ex_post"
+                    ]
+                  },
+                  {
+                    "!!": {
+                      "var": "fields.durability_findings"
+                    }
+                  }
+                ]
+              },
+              "message": "Descrieți constatările privind durabilitatea (secțiunea II)."
+            },
+            {
+              "rule": {
                 "or": [
                   {
                     "==": [
@@ -309,13 +1105,16 @@
                     ]
                   },
                   {
-                    "!!": {
-                      "var": "fields.recommendations"
-                    }
+                    ">": [
+                      {
+                        "var": "fields.recommendations.length"
+                      },
+                      0
+                    ]
                   }
                 ]
               },
-              "message": "Formulați recomandările către beneficiar."
+              "message": "Formulați cel puțin o recomandare, cu termen și dovada cerută (punctul 12)."
             },
             {
               "rule": {
@@ -325,20 +1124,53 @@
                       {
                         "var": "fields.result"
                       },
-                      "conform_cu_recomandari"
+                      "neconform"
                     ]
                   },
                   {
-                    "!!": {
-                      "var": "fields.recommendations_deadline"
-                    }
+                    "in": [
+                      {
+                        "var": "fields.deviation_type"
+                      },
+                      [
+                        "suspiciune_neregula",
+                        "suspiciune_frauda"
+                      ]
+                    ]
                   }
                 ]
               },
-              "message": "Stabiliți termenul de implementare a recomandărilor."
+              "message": "Rezultatul „neconform” trimite dosarul la nereguli și presupune o suspiciune de neregulă sau fraudă. O întârziere nu este, în sine, neregulă: folosiți „conform, cu recomandări”."
+            },
+            {
+              "rule": {
+                "or": [
+                  {
+                    "!": {
+                      "in": [
+                        {
+                          "var": "fields.deviation_type"
+                        },
+                        [
+                          "suspiciune_neregula",
+                          "suspiciune_frauda"
+                        ]
+                      ]
+                    }
+                  },
+                  {
+                    "==": [
+                      {
+                        "var": "fields.result"
+                      },
+                      "neconform"
+                    ]
+                  }
+                ]
+              },
+              "message": "O suspiciune de neregulă sau fraudă se semnalează ierarhic: rezultatul trebuie să fie „neconform”."
             }
-          ],
-          "requiresChecklistComplete": "onsite"
+          ]
         },
         {
           "key": "reschedule",
@@ -356,6 +1188,55 @@
       "assignment": {
         "rule": "department_head",
         "step": "visit"
+      },
+      "fieldAccess": {
+        "smis_code": "visible",
+        "project_title": "visible",
+        "beneficiary_name": "visible",
+        "contract_number": "visible",
+        "visit_reason": "visible",
+        "project_kind": "visible",
+        "visit_scope": "visible",
+        "sampled_reference": "visible",
+        "planned_date": "visible",
+        "location": "visible",
+        "beneficiary_contact": "visible",
+        "notice_documents": "visible",
+        "visibility_requirement": "visible",
+        "team": "visible",
+        "declared_progress": "visible",
+        "stage_indicators_due": "visible",
+        "main_risk": "visible",
+        "equipment": "visible",
+        "works_sampling": "visible",
+        "previous_recommendations": "visible",
+        "visit_date": "visible",
+        "beneficiary_participants": "visible",
+        "representative": "visible",
+        "representative_role": "visible",
+        "documents_checked": "visible",
+        "contract_findings": "visible",
+        "procurement_findings": "visible",
+        "stage_findings": "visible",
+        "indicators_findings": "visible",
+        "equipment_findings": "visible",
+        "works_findings": "visible",
+        "deliverables_findings": "visible",
+        "payments_findings": "visible",
+        "durability_findings": "visible",
+        "management_findings": "visible",
+        "horizontal_findings": "visible",
+        "visibility_findings": "visible",
+        "other_findings": "visible",
+        "risks": "visible",
+        "findings": "visible",
+        "deviation_type": "visible",
+        "result": "visible",
+        "recommendations": "visible",
+        "beneficiary_position": "visible",
+        "missing_documents": "visible",
+        "escalation_level": "editable",
+        "follow_up_notes": "hidden"
       },
       "paths": [
         {
@@ -383,6 +1264,9 @@
         "rule": "role_queue",
         "role": "director"
       },
+      "fieldAccess": {
+        "follow_up_notes": "hidden"
+      },
       "paths": [
         {
           "key": "approve",
@@ -404,7 +1288,7 @@
     {
       "key": "communicate",
       "type": "system",
-      "name": "Comunicarea raportului",
+      "name": "Comunicarea raportului prin MySMIS",
       "onEnter": [
         {
           "type": "register",
@@ -480,15 +1364,97 @@
       },
       "deadline": "follow_up",
       "fieldAccess": {
-        "follow_up_notes": "required",
-        "recommendations": "visible",
-        "recommendations_deadline": "visible"
+        "smis_code": "visible",
+        "project_title": "visible",
+        "beneficiary_name": "visible",
+        "contract_number": "visible",
+        "visit_reason": "visible",
+        "project_kind": "visible",
+        "visit_scope": "visible",
+        "sampled_reference": "visible",
+        "planned_date": "visible",
+        "location": "visible",
+        "beneficiary_contact": "visible",
+        "notice_documents": "visible",
+        "visibility_requirement": "visible",
+        "team": "visible",
+        "declared_progress": "visible",
+        "stage_indicators_due": "visible",
+        "main_risk": "visible",
+        "equipment": "visible",
+        "works_sampling": "visible",
+        "previous_recommendations": "visible",
+        "visit_date": "visible",
+        "beneficiary_participants": "visible",
+        "representative": "visible",
+        "representative_role": "visible",
+        "documents_checked": "visible",
+        "contract_findings": "visible",
+        "procurement_findings": "visible",
+        "stage_findings": "visible",
+        "indicators_findings": "visible",
+        "equipment_findings": "visible",
+        "works_findings": "visible",
+        "deliverables_findings": "visible",
+        "payments_findings": "visible",
+        "durability_findings": "visible",
+        "management_findings": "visible",
+        "horizontal_findings": "visible",
+        "visibility_findings": "visible",
+        "other_findings": "visible",
+        "risks": "visible",
+        "findings": "visible",
+        "deviation_type": "visible",
+        "result": "visible",
+        "recommendations": "editable",
+        "beneficiary_position": "visible",
+        "missing_documents": "visible",
+        "escalation_level": "editable",
+        "follow_up_notes": "required"
       },
       "paths": [
         {
           "key": "implemented",
           "label": "Recomandări implementate – închide",
-          "to": "done"
+          "to": "done",
+          "validations": [
+            {
+              "rule": {
+                "none": [
+                  {
+                    "var": "fields.recommendations"
+                  },
+                  {
+                    "!=": [
+                      {
+                        "var": "status"
+                      },
+                      "implementata"
+                    ]
+                  }
+                ]
+              },
+              "message": "Toate recomandările trebuie să fie marcate „implementată” (cu dovada încărcată în MySMIS)."
+            }
+          ]
+        },
+        {
+          "key": "new_visit",
+          "label": "Verificare la fața locului nouă",
+          "to": "done",
+          "requiresComment": true,
+          "actions": [
+            {
+              "type": "start_subflow",
+              "subflow": "p8_onsite_verification",
+              "inputs": {
+                "visit_reason": "=monitorizare",
+                "location": "location",
+                "beneficiary_contact": "beneficiary_contact",
+                "project_kind": "project_kind"
+              }
+            }
+          ]
         },
         {
           "key": "not_implemented",
@@ -532,9 +1498,11 @@
   ],
   "conflictOfInterest": {
     "steps": [
+      "prepare",
       "visit",
       "head_review",
       "director_approval"
-    ]
+    ],
+    "statement": "Declar pe propria răspundere că nu mă aflu în conflict de interese cu beneficiarul sau cu furnizorii acestuia, că voi păstra confidențialitatea informațiilor obținute și că nu voi accepta cadouri, mese sau transport din partea beneficiarului."
   }
 }

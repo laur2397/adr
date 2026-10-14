@@ -1,73 +1,949 @@
 {
   "key": "p8_onsite",
-  "name": "Lista de verificare la fața locului",
+  "name": "Verificarea la fața locului (Anexa 6 la Ordinul MIPE 1777/2023)",
   "answerSet": [
     "DA",
     "NU",
     "NA"
   ],
-  "note": "Lista implicită; se înlocuiește cu lista din manualul de proceduri al AM.",
+  "note": "Structura raportului de vizită din Anexa 6; punctele care nu privesc tipul vizitei sau al investiției nu se afișează.",
   "items": [
     {
-      "code": "1",
-      "question": "Operațiunea se desfășoară la adresa declarată în contractul de finanțare?"
+      "code": "1.1",
+      "section": "1. Modificări ale contractului de finanțare",
+      "question": "Realitatea din teren corespunde contractului și actelor adiționale (fără modificări de facto privind locul, activitățile, echipamentele sau bugetul)?",
+      "hint": "Comparați cu cererea de finanțare. Orice schimbare făcută fără act adițional sau notificare se consemnează la punctul 9.",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
     },
     {
-      "code": "2",
-      "question": "Bunurile achiziționate există fizic, sunt instalate și funcționale?",
+      "code": "2.1.1",
+      "section": "2.1 Contracte de achiziție",
+      "question": "Originalele contractelor de achiziție și ale actelor adiționale sunt disponibile și corespund celor încărcate în MySMIS?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "2.1.2",
+      "section": "2.1 Contracte de achiziție",
+      "question": "Firma care lucrează efectiv pe teren este cea contractată (inclusiv subcontractanții declarați)?",
+      "hint": "Întrebați echipa de pe șantier, verificați ecusoanele, utilajele și jurnalul de șantier. O firmă nedeclarată se consemnează și se semnalează.",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "2.1.3",
+      "section": "2.1 Contracte de achiziție",
+      "question": "Garanțiile de bună execuție sunt constituite și valabile?",
       "observationRequiredOn": [
         "NU",
         "NA"
-      ]
+      ],
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
     },
     {
-      "code": "3",
-      "question": "Bunurile corespund ca tip, cantitate și caracteristici facturilor și proceselor-verbale de recepție?",
+      "code": "2.2.1",
+      "section": "2.2 Stadiul activităților",
+      "question": "Stadiul fizic corespunde graficului și celui declarat în ultimul raport de progres?",
+      "hint": "Raportul de progres = ce SPUNE beneficiarul; vizita = ce EXISTĂ. Dacă s-a declarat 70% și vedeți doar fundațiile, estimați procentul real și fotografiați.",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "2.2.2",
+      "section": "2.2 Stadiul activităților",
+      "question": "Întârzierile au cauze documentate și un plan de recuperare?",
+      "hint": "Întârzierea nu este, în sine, neregulă: se tratează prin recomandări și monitorizare.",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "2.3.1",
+      "section": "2.3 Indicatori",
+      "question": "Indicatorii de realizare raportați pot fi confirmați fizic?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "2.3.2",
+      "section": "2.3 Indicatori",
+      "question": "Indicatorii de rezultat și cei suplimentari sunt pe traiectoria asumată?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "2.4.1",
+      "section": "2.4 Echipamente",
+      "question": "Echipamentele există fizic, în cantitățile din facturi și procesele-verbale de recepție?",
+      "hint": "Bifați fiecare echipament în tabel. Un echipament facturat care lipsește se fotografiază locul și se cere explicația scrisă.",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "!=": [
+              {
+                "var": "fields.project_kind"
+              },
+              "servicii"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.4.2",
+      "section": "2.4 Echipamente",
+      "question": "Seriile echipamentelor corespund facturilor și proceselor-verbale de recepție?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "!=": [
+              {
+                "var": "fields.project_kind"
+              },
+              "servicii"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.4.3",
+      "section": "2.4 Echipamente",
+      "question": "Echipamentele sunt amplasate conform cererii de finanțare, funcționale și folosite doar în scopul proiectului?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "!=": [
+              {
+                "var": "fields.project_kind"
+              },
+              "servicii"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.4.4",
+      "section": "2.4 Echipamente",
+      "question": "Echipamentele sunt înregistrate în inventar și poartă etichetele de identificare (finanțare UE)?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "!=": [
+              {
+                "var": "fields.project_kind"
+              },
+              "servicii"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.5.1",
+      "section": "2.5 Lucrări și autorizația de construire",
+      "question": "Autorizația de construire este valabilă, iar lucrările se încadrează în ea și în avizele obținute?",
+      "hint": "Autorizație expirată sau lucrări peste autorizație: consemnați și semnalați ierarhic; lucrările neautorizate nu se decontează.",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "in": [
+              {
+                "var": "fields.project_kind"
+              },
+              [
+                "lucrari",
+                "eficienta_energetica"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.5.2",
+      "section": "2.5 Lucrări și autorizația de construire",
+      "question": "Există procesul-verbal de predare a amplasamentului, ordinul de începere și anunțul de începere a lucrărilor către emitent și ISC?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "in": [
+              {
+                "var": "fields.project_kind"
+              },
+              [
+                "lucrari",
+                "eficienta_energetica"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.5.3",
+      "section": "2.5 Lucrări și autorizația de construire",
+      "question": "Dirigintele de șantier autorizat și responsabilul tehnic cu execuția sunt numiți?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "in": [
+              {
+                "var": "fields.project_kind"
+              },
+              [
+                "lucrari",
+                "eficienta_energetica"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.5.4",
+      "section": "2.5 Lucrări și autorizația de construire",
+      "question": "Jurnalul de șantier este la zi, cu procese-verbale pentru lucrările ascunse și fazele determinante?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "in": [
+              {
+                "var": "fields.project_kind"
+              },
+              [
+                "lucrari",
+                "eficienta_energetica"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.5.5",
+      "section": "2.5 Lucrări și autorizația de construire",
+      "question": "Există certificate de calitate și declarații de performanță pentru materialele puse în operă?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "in": [
+              {
+                "var": "fields.project_kind"
+              },
+              [
+                "lucrari",
+                "eficienta_energetica"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.5.6",
+      "section": "2.5 Lucrări și autorizația de construire",
+      "question": "Cantitățile măsurate prin sondaj (2–3 poziții) corespund situațiilor de lucrări decontate?",
+      "hint": "Completați tabelul de măsurători: diferența apare automat în procente.",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "in": [
+              {
+                "var": "fields.project_kind"
+              },
+              [
+                "lucrari",
+                "eficienta_energetica"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.5.7",
+      "section": "2.5 Lucrări și autorizația de construire",
+      "question": "Panoul de identificare a investiției (distinct de panoul UE) este afișat?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "in": [
+              {
+                "var": "fields.project_kind"
+              },
+              [
+                "lucrari",
+                "eficienta_energetica"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.5.8",
+      "section": "2.5 Lucrări și autorizația de construire",
+      "question": "Calitatea vizibilă a lucrărilor este corespunzătoare (fără fisuri, infiltrații, degradări)?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "in": [
+              {
+                "var": "fields.project_kind"
+              },
+              [
+                "lucrari",
+                "eficienta_energetica"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "EE.1",
+      "section": "Eficiență energetică – clădiri publice (Ghid v7)",
+      "question": "Clădirea este cea din cerere (adresă, carte funciară, destinație) și a fost construită înainte de 31.12.2000?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "==": [
+              {
+                "var": "fields.project_kind"
+              },
+              "eficienta_energetica"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "EE.2",
+      "section": "Eficiență energetică – clădiri publice (Ghid v7)",
+      "question": "Sunt executate toate măsurile din auditul energetic și DALI (pereți, acoperiș, planșeu, tâmplărie)?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "==": [
+              {
+                "var": "fields.project_kind"
+              },
+              "eficienta_energetica"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "EE.3",
+      "section": "Eficiență energetică – clădiri publice (Ghid v7)",
+      "question": "Tipul și grosimea termoizolației și tâmplăria corespund proiectului tehnic?",
+      "hint": "Măsurați grosimea izolației într-un punct de sondaj și fotografiați cu ruleta.",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "==": [
+              {
+                "var": "fields.project_kind"
+              },
+              "eficienta_energetica"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "EE.4",
+      "section": "Eficiență energetică – clădiri publice (Ghid v7)",
+      "question": "Instalațiile (încălzire, ventilare, apă caldă, iluminat, surse regenerabile) sunt montate, cu serii verificate, și funcționează?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "==": [
+              {
+                "var": "fields.project_kind"
+              },
+              "eficienta_energetica"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "EE.5",
+      "section": "Eficiență energetică – clădiri publice (Ghid v7)",
+      "question": "Contorizarea / sistemul BMS este instalat și permite urmărirea reducerii consumului de energie primară (peste 60%)?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "==": [
+              {
+                "var": "fields.project_kind"
+              },
+              "eficienta_energetica"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "EE.6",
+      "section": "Eficiență energetică – clădiri publice (Ghid v7)",
+      "question": "Lucrările de tip B–G sunt realizate numai împreună cu lucrările de tip A?",
+      "appliesWhen": {
+        "and": [
+          {
+            "!=": [
+              {
+                "var": "fields.visit_reason"
+              },
+              "ex_post"
+            ]
+          },
+          {
+            "==": [
+              {
+                "var": "fields.project_kind"
+              },
+              "eficienta_energetica"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": "2.6.1",
+      "section": "2.6–2.7 Livrabile și resurse umane",
+      "question": "Livrabilele contractate (studii, software, servicii) există și corespund specificațiilor?",
+      "observationRequiredOn": [
+        "NU"
+      ],
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "2.7.1",
+      "section": "2.6–2.7 Livrabile și resurse umane",
+      "question": "Echipa de proiect există și lucrează conform deciziilor de numire, fișelor de post și pontajelor?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "3.1",
+      "section": "3. Indicatori de etapă și planul de monitorizare",
+      "question": "Indicatorii de etapă scadenți sunt îndepliniți, cu dovezile încărcate în MySMIS?",
+      "hint": "Neîndeplinirea unui indicator de etapă nu este, în sine, neregulă (OUG 23/2023, art. 14 alin. 19). Primul indicator neîndeplinit nu atrage măsuri corective.",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      },
+      "legalBasis": "OUG 23/2023, art. 14"
+    },
+    {
+      "code": "3.2",
+      "section": "3. Indicatori de etapă și planul de monitorizare",
+      "question": "Planul de monitorizare este actualizat cu modificările de grafic?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "4.1",
+      "section": "4. Graficul cererilor de prefinanțare / plată / rambursare",
+      "question": "Cererile de prefinanțare, plată și rambursare sunt depuse conform graficului asumat?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "4.2",
+      "section": "4. Graficul cererilor de prefinanțare / plată / rambursare",
+      "question": "Prefinanțarea primită este justificată sau recuperată în termen?",
+      "appliesWhen": {
+        "!=": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "F.1",
+      "section": "Cererea de rambursare finală",
+      "question": "Toate activitățile sunt finalizate, iar investiția este recepționată și funcțională?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "cerere_finala"
+        ]
+      },
+      "legalBasis": "Ghidul solicitantului, sect. 11.2 / 12.5"
+    },
+    {
+      "code": "F.2",
+      "section": "Cererea de rambursare finală",
+      "question": "Toți indicatorii de realizare sunt atinși și dovediți?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "cerere_finala"
+        ]
+      }
+    },
+    {
+      "code": "F.3",
+      "section": "Cererea de rambursare finală",
+      "question": "Plăcuța permanentă este montată?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "cerere_finala"
+        ]
+      }
+    },
+    {
+      "code": "X.1",
+      "section": "Verificare încrucișată – dublă finanțare",
+      "question": "Bunurile și facturile nu sunt finanțate și din alte programe sau surse publice (mențiunea „finanțat prin…” pe facturile originale)?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "incrucisata"
+        ]
+      }
+    },
+    {
+      "code": "X.2",
+      "section": "Verificare încrucișată – dublă finanțare",
+      "question": "Constatările au fost corelate cu celelalte structuri care finanțează beneficiarul?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "incrucisata"
+        ]
+      }
+    },
+    {
+      "code": "D.1",
+      "section": "II. Durabilitate (post-implementare)",
+      "question": "Investiția există și funcționează la locul de implementare?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      },
+      "legalBasis": "Regulamentul (UE) 2021/1060, art. 65"
+    },
+    {
+      "code": "D.2",
+      "section": "II. Durabilitate (post-implementare)",
+      "question": "Bunurile nu au fost vândute, închiriate sau mutate?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "D.3",
+      "section": "II. Durabilitate (post-implementare)",
+      "question": "Activitatea și destinația sunt neschimbate, iar condițiile de operare nu sunt afectate?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "D.4",
+      "section": "II. Durabilitate (post-implementare)",
+      "question": "Indicatorii de rezultat sunt menținuți?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "D.5",
+      "section": "II. Durabilitate (post-implementare)",
+      "question": "Plăcuța permanentă este prezentă?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "D.6",
+      "section": "II. Durabilitate (post-implementare)",
+      "question": "Ipotecile sau alte garanții sunt doar cele permise și au fost notificate în 10 zile lucrătoare?",
+      "observationRequiredOn": [
+        "NU",
+        "NA"
+      ],
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "D.7",
+      "section": "II. Durabilitate (post-implementare)",
+      "question": "Veniturile nete sunt raportate anual, iar rapoartele de durabilitate sunt depuse la termen?",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "D.8",
+      "section": "II. Durabilitate (post-implementare)",
+      "question": "Cererile de plată sunt închise, iar prefinanțarea este recuperată integral?",
+      "hint": "Nerespectarea durabilității atrage reducerea proporțională a finanțării; excepție: falimentul nefrauduos.",
+      "appliesWhen": {
+        "==": [
+          {
+            "var": "fields.visit_reason"
+          },
+          "ex_post"
+        ]
+      }
+    },
+    {
+      "code": "5.1",
+      "section": "5. Stadiul recomandărilor anterioare",
+      "question": "Recomandările vizitei anterioare au fost implementate în termen?",
+      "hint": "Stabiliți stadiul fiecărei recomandări în tabel. Neaplicarea recomandărilor poate fi motiv de reziliere.",
       "observationRequiredOn": [
         "NU"
       ]
     },
     {
-      "code": "4",
-      "question": "Seriile / numerele de inventar ale echipamentelor corespund documentelor?"
+      "code": "6.1",
+      "section": "6. Managementul proiectului",
+      "question": "Dosarul proiectului (originalele) este disponibil la sediu și corespunde documentelor din MySMIS?",
+      "hint": "Dosarul se păstrează 5 ani de la 31 decembrie a anului ultimei plăți."
     },
     {
-      "code": "5",
-      "question": "Lucrările executate corespund situațiilor de lucrări decontate?",
+      "code": "6.2",
+      "section": "6. Managementul proiectului",
+      "question": "Beneficiarul ține o evidență contabilă analitică distinctă a proiectului?"
+    },
+    {
+      "code": "6.3",
+      "section": "6. Managementul proiectului",
+      "question": "Corespondența oficială cu AM se face prin MySMIS (nu se primesc documente pe hârtie la vizită)?"
+    },
+    {
+      "code": "7.1",
+      "section": "7. Principii orizontale",
+      "question": "Accesibilitatea pentru persoanele cu dizabilități este asigurată, unde este cazul?"
+    },
+    {
+      "code": "7.2",
+      "section": "7. Principii orizontale",
+      "question": "Egalitatea de șanse și nediscriminarea sunt respectate?"
+    },
+    {
+      "code": "7.3",
+      "section": "7. Principii orizontale",
+      "question": "Principiul DNSH este respectat (deșeurile de șantier gestionate, fără daune semnificative mediului)?"
+    },
+    {
+      "code": "8.1",
+      "section": "8. Informare și vizibilitate",
+      "question": "Măsura de vizibilitate cerută pentru proiect (vezi cerința calculată) există, la loc vizibil, cu dimensiunile minime?",
+      "hint": "Se montează la începutul implementării fizice și rămâne permanent. Lipsa sau nerespectarea poate atrage o reducere de până la 3% din sprijin. Fotografiați panoul cu ruleta.",
+      "legalBasis": "Regulamentul (UE) 2021/1060, art. 47, 50 și Anexa IX"
+    },
+    {
+      "code": "8.2",
+      "section": "8. Informare și vizibilitate",
+      "question": "Elementele obligatorii (emblema UE, „Cofinanțat de Uniunea Europeană”, programul) sunt corecte, iar materialele promovează programul, nu marca beneficiarului?"
+    },
+    {
+      "code": "8.3",
+      "section": "8. Informare și vizibilitate",
+      "question": "Materialele de comunicare au fost transmise spre avizare cu cel puțin 10 zile lucrătoare înainte de folosire?"
+    },
+    {
+      "code": "8.4",
+      "section": "8. Informare și vizibilitate",
+      "question": "Operațiune peste 10 mil. EUR / strategică: s-au realizat evenimentul de comunicare, materialele foto/video, campania și clipul final?",
+      "appliesWhen": {
+        "amount_gte": [
+          {
+            "var": "project.total_value"
+          },
+          "49700000"
+        ]
+      }
+    },
+    {
+      "code": "Z.1",
+      "section": "Încheierea vizitei",
+      "question": "Constatările au fost prezentate verbal reprezentantului, fără promisiuni privind rezultatul?"
+    },
+    {
+      "code": "Z.2",
+      "section": "Încheierea vizitei",
+      "question": "Punctul de vedere al beneficiarului a fost consemnat?"
+    },
+    {
+      "code": "Z.3",
+      "section": "Încheierea vizitei",
+      "question": "Beneficiarul a primit lista documentelor lipsă de încărcat în MySMIS?",
       "observationRequiredOn": [
         "NU"
       ]
-    },
-    {
-      "code": "6",
-      "question": "Activitățile se desfășoară conform graficului din contract și raportului de progres?"
-    },
-    {
-      "code": "7",
-      "question": "Documentele originale sunt disponibile la sediul beneficiarului?"
-    },
-    {
-      "code": "8",
-      "question": "Beneficiarul ține o evidență contabilă distinctă a operațiunii?"
-    },
-    {
-      "code": "9",
-      "question": "Sunt respectate măsurile de informare și publicitate (panou, plăcuță, autocolante)?",
-      "observationRequiredOn": [
-        "NU"
-      ]
-    },
-    {
-      "code": "10",
-      "question": "Indicatorii de realizare raportați pot fi confirmați la fața locului?"
-    },
-    {
-      "code": "11",
-      "question": "Bunurile nu sunt folosite în alte scopuri decât cele ale proiectului?"
-    },
-    {
-      "code": "12",
-      "question": "Sunt respectate principiile orizontale (egalitate de șanse, mediu, accesibilitate)?"
     }
   ]
 }

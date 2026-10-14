@@ -597,46 +597,111 @@ const VISIT_PLACES: Array<[string, number, number]> = [
  * P8: an on-site verification with photos (time, GPS) and the representative's signature.
  * outcome: 'conform' closes; 'recommendations' is followed up; 'nonconform' opens an irregularity.
  */
-async function* p8(w: World, start: number, opts: { projectIdx: number; outcome: 'conform' | 'recommendations' | 'nonconform'; reason: string }): Scenario {
+async function* p8(w: World, start: number, opts: { projectIdx: number; outcome: 'conform' | 'recommendations' | 'nonconform'; reason: string; kind?: 'echipamente' | 'lucrari' | 'eficienta_energetica' | 'servicii' }): Scenario {
   const { as } = w;
   const project = w.projects[opts.projectIdx % w.projects.length]!;
   const [place, lat0, lon0] = VISIT_PLACES[opts.projectIdx % VISIT_PLACES.length]!;
+  const kind = opts.kind ?? 'echipamente';
+  const works = kind === 'lucrari' || kind === 'eficienta_energetica';
+  const unannounced = opts.reason === 'suspiciune' || opts.reason === 'ad_hoc';
+  const nonconform = opts.outcome === 'nonconform';
   yield { day: start, hour: 9 };
   const { id } = await as['sef.sm']!.call('POST', '/instances', { definitionKey: 'p8_onsite_verification', projectId: project.id });
-  await as['sef.sm']!.fields(id, 'planning', { visit_reason: opts.reason, planned_date: toIso(dateOf(start + 6)), location: place, beneficiary_contact: 'reprezentantul legal al beneficiarului' });
+  await as['sef.sm']!.fields(id, 'planning', {
+    visit_reason: opts.reason,
+    project_kind: kind,
+    visit_scope: works ? 'Verificarea stadiului fizic al lucrărilor și a situațiilor de lucrări decontate.' : 'Verificarea existenței și funcționării echipamentelor decontate și a indicatorilor.',
+    planned_date: toIso(dateOf(start + 6)),
+    location: place,
+    beneficiary_contact: 'reprezentantul legal al beneficiarului',
+  });
   await as['sef.sm']!.go(id, 'planning', 'schedule');
+
+  // Preparation (PREGĂTESC): team, risk, equipment or works positions, prepare checklist.
+  yield { day: start + 3, hour: 10 };
+  await as.ei1!.list(id, 'prepare', 'team', [
+    { name: w.pick(['Elena Ionescu', 'Radu Marin', 'Ana Dima']), role: 'ofiter_monitorizare' },
+    { name: w.pick(['Mihai Pop', 'Dan Toma']), role: works ? 'expert_achizitii' : 'ofiter_autorizare_plati' },
+  ]);
+  if (works)
+    await as.ei1!.list(id, 'prepare', 'works_sampling', [
+      { position: '3.2', description: 'Zidărie BCA 30 cm', unit: 'mc', qty_paid: '120.00' },
+      { position: '5.1', description: 'Termoizolație fațadă 15 cm', unit: 'mp', qty_paid: '860.00' },
+    ]);
+  else
+    await as.ei1!.list(id, 'prepare', 'equipment', [
+      { item: 'Centru de prelucrare CNC', quantity: 1, serial_expected: 'CNC-4471', invoice: 'F 112/2025', placement: 'Hala 1' },
+      { item: 'Compresor industrial', quantity: 1, serial_expected: 'KP-0098', invoice: 'F 113/2025', placement: 'Hala 1' },
+    ]);
+  await as.ei1!.fields(id, 'prepare', {
+    declared_progress: works ? '70% din lucrări, conform raportului de progres nr. 4.' : 'Toate echipamentele recepționate, conform raportului de progres nr. 3.',
+    stage_indicators_due: 'Indicatorul de etapă nr. 2 (capacitate instalată) scadent luna aceasta.',
+    main_risk: works ? 'Lucrările ascunse și cantitățile din situațiile de lucrări.' : 'Seriile echipamentelor față de facturi.',
+  });
+  const prep = await as.ei1!.call('GET', `/instances/${id}`);
+  const prepItems = (prep.checklists.find((c: any) => c.key === 'prepare')?.items ?? []).filter((i: any) => i.applies !== false);
+  await as.ei1!.checklist(id, 'prepare', 'prepare', prepItems.map((i: any) => ({ code: i.code, answer: i.code === 'P.7' && !works ? 'NA' : 'DA', observation: i.code === 'P.7' && !works ? 'Prima vizită la acest proiect.' : undefined })));
+  await as.ei1!.go(id, 'prepare', 'ready');
+
+  // Visit (VERIFIC): the Anexa 6 checklist (only the points that apply), section findings, tables.
   yield { day: start + 6, hour: 11 };
   const visitDay = toIso(dateOf(start + 6));
-  const nonconform = opts.outcome === 'nonconform';
-  await as.ei1!.checklist(id, 'visit', 'onsite', Array.from({ length: 12 }, (_, i) => {
-    const code = String(i + 1);
-    if (opts.outcome === 'recommendations' && code === '9') return { code, answer: 'NU', observation: 'Panoul permanent de informare nu este montat la intrarea în obiectiv.' };
-    if (nonconform && code === '2') return { code, answer: 'NU', observation: 'Unul dintre echipamentele decontate nu se află la locația declarată.' };
-    if (nonconform && code === '3') return { code, answer: 'NU', observation: 'Seria echipamentului prezentat diferă de cea din factură și din procesul-verbal de recepție.' };
-    return { code, answer: 'DA' };
+  const d0 = await as.ei1!.call('GET', `/instances/${id}`);
+  const items = (d0.checklists.find((c: any) => c.key === 'onsite')?.items ?? []).filter((i: any) => i.applies !== false);
+  await as.ei1!.checklist(id, 'visit', 'onsite', items.map((i: any) => {
+    if (opts.outcome === 'recommendations' && i.code === '8.1') return { code: i.code, answer: 'NU', observation: 'Panoul permanent de informare nu este montat la intrarea în obiectiv.' };
+    if (nonconform && i.code === '2.4.1') return { code: i.code, answer: 'NU', observation: 'Un echipament decontat nu se află la locația declarată.' };
+    if (nonconform && i.code === '2.5.1') return { code: i.code, answer: 'NU', observation: 'Pe șantier lucrează un subcontractant nedeclarat.' };
+    return { code: i.code, answer: 'DA' };
   }));
+  await as.ei1!.list(id, 'visit', 'beneficiary_participants', [{ name: w.pick(['Ion Popescu', 'Maria Ionescu', 'Andrei Georgescu']), function: w.pick(['administrator', 'manager de proiect']) }]);
+  const docs = (await as.ei1!.call('GET', `/instances/${id}`)).fields.find((f: any) => f.key === 'documents_checked')?.value ?? [];
+  await as.ei1!.list(id, 'visit', 'documents_checked', docs.map((r: any, i: number) => ({ ...r, method: i < 3 ? 'integral' : 'esantion' })));
+  if (works)
+    await as.ei1!.list(id, 'visit', 'works_sampling', [
+      { position: '3.2', description: 'Zidărie BCA 30 cm', unit: 'mc', qty_paid: '120.00', qty_measured: nonconform ? '96.00' : '119.00' },
+      { position: '5.1', description: 'Termoizolație fațadă 15 cm', unit: 'mp', qty_paid: '860.00', qty_measured: '858.00' },
+    ]);
+  else
+    await as.ei1!.list(id, 'visit', 'equipment', [
+      { item: 'Centru de prelucrare CNC', quantity: 1, serial_expected: 'CNC-4471', placement: 'Hala 1', status: 'conform', serial_found: 'CNC-4471' },
+      { item: 'Compresor industrial', quantity: 1, serial_expected: 'KP-0098', placement: 'Hala 1', status: nonconform ? 'lipsa' : 'conform', serial_found: nonconform ? '' : 'KP-0098', observation: nonconform ? 'Nu se află la locația declarată.' : undefined },
+    ]);
   const findings = {
     conform: 'Bunurile și lucrările decontate există, sunt funcționale și corespund documentelor. Documentele originale și evidența contabilă distinctă au fost prezentate. Măsurile de publicitate sunt respectate.',
     recommendations: 'Bunurile decontate sunt instalate și funcționale la adresa declarată. Panoul permanent de informare și publicitate nu este montat; există doar autocolante pe echipamente.',
-    nonconform: 'Centrul de prelucrare decontat prin cererea de rambursare nu se află la locația declarată; echipamentul prezentat are altă serie decât cea din factură. Se sesizează Serviciul Nereguli.',
+    nonconform: 'Un bun decontat nu se află la locația declarată și pe șantier lucrează un subcontractant nedeclarat. Se sesizează Serviciul Nereguli.',
   }[opts.outcome];
   await as.ei1!.fields(id, 'visit', {
     visit_date: visitDay,
-    representative: w.pick(['Ion Popescu', 'Maria Ionescu', 'Andrei Georgescu', 'Elena Dobre', 'Mihai Stoica']),
+    representative: w.pick(['Ion Popescu', 'Maria Ionescu', 'Andrei Georgescu', 'Elena Dobre']),
     representative_role: w.pick(['administrator', 'manager de proiect', 'reprezentant legal']),
+    stage_findings: works ? 'Stadiu fizic estimat la 68%, în linie cu graficul.' : 'Activitățile de achiziție sunt finalizate, conform graficului.',
+    equipment_findings: works ? '' : nonconform ? 'Un echipament lipsește de la locația declarată.' : 'Echipamentele există, sunt funcționale și poartă etichetele de identificare.',
+    works_findings: works ? (nonconform ? 'Diferență de 20% la cantitatea de zidărie decontată față de cea măsurată.' : 'Cantitățile măsurate corespund situațiilor de lucrări decontate.') : '',
+    durability_findings: opts.reason === 'ex_post' ? 'Investiția există, funcționează la locația declarată și nu a fost înstrăinată; indicatorii de rezultat sunt menținuți.' : '',
+    visibility_findings: opts.outcome === 'recommendations' ? 'Panoul permanent nu este montat.' : 'Panoul și elementele de identitate vizuală sunt conforme.',
     findings,
+    deviation_type: nonconform ? 'suspiciune_neregula' : opts.outcome === 'recommendations' ? 'abatere_procedurala' : 'fara_abateri',
     result: opts.outcome === 'conform' ? 'conform' : opts.outcome === 'recommendations' ? 'conform_cu_recomandari' : 'neconform',
-    ...(opts.outcome === 'conform' ? {} : { recommendations: nonconform ? 'Prezentarea echipamentului decontat și a documentelor de transfer.' : 'Montarea panoului permanent de informare, conform Manualului de identitate vizuală.', recommendations_deadline: toIso(dateOf(start + 36)) }),
+    escalation_level: nonconform ? 'masuri_corective' : opts.outcome === 'recommendations' ? 'sprijin' : undefined,
+    beneficiary_position: 'Reprezentantul beneficiarului a luat la cunoștință constatările.',
+    missing_documents: opts.outcome === 'conform' ? '' : 'Se vor încărca în MySMIS documentele solicitate, în termen de 10 zile lucrătoare.',
   });
-  const shots: Array<['building' | 'equipment' | 'panel' | 'works', string]> = [
-    ['building', 'Vedere generală a obiectivului'],
-    ['equipment', nonconform ? 'Echipamentul prezentat (altă serie decât în factură)' : 'Echipamentul achiziționat, cu plăcuța de identificare'],
-    ['panel', opts.outcome === 'recommendations' ? 'Locul unde trebuia montat panoul de informare' : 'Panoul de informare și publicitate'],
+  if (opts.outcome !== 'conform')
+    await as.ei1!.list(id, 'visit', 'recommendations', nonconform
+      ? [{ recommendation: 'Prezentarea bunului decontat și a documentelor de transfer', deadline: toIso(dateOf(start + 36)), evidence_required: 'Proces-verbal și fotografii, în MySMIS' }]
+      : [{ recommendation: 'Montarea panoului permanent de informare', deadline: toIso(dateOf(start + 36)), evidence_required: 'Fotografie datată, încărcată în MySMIS' }]);
+
+  const shots: Array<['building' | 'equipment' | 'panel' | 'works', string, string]> = [
+    ['building', 'Vedere generală a obiectivului', '2.2 Stadiul activităților'],
+    [works ? 'works' : 'equipment', works ? 'Front de lucru – zidărie' : nonconform ? 'Locul unde ar trebui să fie echipamentul' : 'Echipamentul achiziționat, cu seria vizibilă', works ? '2.5 Lucrări și autorizația de construire' : '2.4 Echipamente'],
+    ['panel', opts.outcome === 'recommendations' ? 'Locul unde trebuia montat panoul de informare' : 'Panoul de informare și publicitate', '8. Informare și vizibilitate'],
   ];
-  for (const [i, [kind, caption]] of shots.entries()) {
+  for (const [i, [shot, caption, section]] of shots.entries()) {
     const takenAt = new Date(`${visitDay}T${String(7 + i).padStart(2, '0')}:${String(10 + i * 7).padStart(2, '0')}:00Z`).toISOString();
-    await as.ei1!.upload(id, demoPhoto(kind, opts.projectIdx * 10 + i, 960, 720), {
-      kind: 'photo', clientId: `sim-${id}-${i}`, caption, takenAt,
+    await as.ei1!.upload(id, demoPhoto(shot, opts.projectIdx * 10 + i, 960, 720), {
+      kind: 'photo', clientId: `sim-${id}-${i}`, caption, section, takenAt,
       latitude: (lat0 + (w.rnd() - 0.5) * 0.0008).toFixed(6), longitude: (lon0 + (w.rnd() - 0.5) * 0.0008).toFixed(6), accuracy: String(4 + Math.floor(w.rnd() * 12)),
     });
   }
@@ -656,11 +721,13 @@ async function* p8(w: World, start: number, opts: { projectIdx: number; outcome:
   await as.director!.go(id, 'director_approval', 'approve');
   if (opts.outcome === 'recommendations') {
     yield { day: start + 30, hour: 11 };
-    await as.ei1!.fields(id, 'follow_up', { follow_up_notes: 'Beneficiarul a transmis fotografii cu panoul permanent montat; recomandarea este implementată.' });
+    const recs = (await as.ei1!.call('GET', `/instances/${id}`)).fields.find((f: any) => f.key === 'recommendations')?.value ?? [];
+    await as.ei1!.list(id, 'follow_up', 'recommendations', recs.map((r: any) => ({ ...r, status: 'implementata' })));
+    await as.ei1!.fields(id, 'follow_up', { follow_up_notes: 'Beneficiarul a încărcat în MySMIS dovada implementării recomandării; recomandarea este implementată.' });
     await as.ei1!.go(id, 'follow_up', 'implemented');
   } else if (nonconform) {
     const child = await query(getPool(), `select id from instance where parent_instance_id = $1`, [id]);
-    if (child[0]) yield* p4Continue(w, child[0].id, start + 14, true, { irregularity_type: 'cheltuieli_neeligibile', finding: 'Se confirmă neregula constatată la vizita la fața locului: echipamentul decontat nu se află în operațiune. Cheltuiala aferentă devine neeligibilă și se recuperează.' });
+    if (child[0]) yield* p4Continue(w, child[0].id, start + 14, true, { irregularity_type: 'cheltuieli_neeligibile', finding: 'Se confirmă neregula constatată la vizita la fața locului: un bun decontat nu se află în operațiune. Cheltuiala aferentă devine neeligibilă și se recuperează.' });
   }
 }
 
@@ -747,14 +814,15 @@ export async function simulate(options: { password: string; days?: number; log?:
   [[0.1, 0, true], [0.42, 1, true], [0.63, 2, true], [0.88, 3, true], [0.97, 4, false]].forEach(([f, i, fin]) => scenarios.push(p7(w, at(f as number), i as number, fin as boolean)));
   // On-site verifications: finished ones of each outcome, and some still at the head, the director, or in follow-up.
   scenarios.push(
-    p8(w, at(0.12), { projectIdx: 1, outcome: 'conform', reason: 'esantion_aleator' }),
-    p8(w, at(0.28), { projectIdx: 4, outcome: 'recommendations', reason: 'esantion_risc' }),
-    p8(w, at(0.41), { projectIdx: 2, outcome: 'nonconform', reason: 'esantion_risc' }),
-    p8(w, at(0.58), { projectIdx: 6, outcome: 'conform', reason: 'cerere_finala' }),
-    p8(w, at(0.7), { projectIdx: 8, outcome: 'recommendations', reason: 'monitorizare' }),
-    limit(p8(w, at(0.8), { projectIdx: 3, outcome: 'recommendations', reason: 'esantion_risc' }), 5), // in follow-up today
-    limit(p8(w, at(0.89), { projectIdx: 5, outcome: 'conform', reason: 'esantion_aleator' }), 4), // at the director
-    limit(p8(w, at(0.92), { projectIdx: 7, outcome: 'conform', reason: 'suspiciune' }), 2), // report waiting to be sent
+    p8(w, at(0.12), { projectIdx: 1, outcome: 'conform', reason: 'planificata', kind: 'echipamente' }),
+    p8(w, at(0.28), { projectIdx: 4, outcome: 'recommendations', reason: 'esantion_risc', kind: 'lucrari' }),
+    p8(w, at(0.41), { projectIdx: 2, outcome: 'nonconform', reason: 'suspiciune', kind: 'lucrari' }),
+    p8(w, at(0.58), { projectIdx: 6, outcome: 'conform', reason: 'cerere_finala', kind: 'eficienta_energetica' }),
+    p8(w, at(0.7), { projectIdx: 8, outcome: 'recommendations', reason: 'monitorizare', kind: 'echipamente' }),
+    p8(w, at(0.5), { projectIdx: 0, outcome: 'conform', reason: 'ex_post', kind: 'echipamente' }),
+    limit(p8(w, at(0.8), { projectIdx: 3, outcome: 'recommendations', reason: 'esantion_risc', kind: 'lucrari' }), 7), // in follow-up today
+    limit(p8(w, at(0.89), { projectIdx: 5, outcome: 'conform', reason: 'planificata', kind: 'servicii' }), 6), // at the director
+    limit(p8(w, at(0.92), { projectIdx: 7, outcome: 'conform', reason: 'ad_hoc', kind: 'echipamente' }), 4), // report waiting to be sent
   );
 
   // Scheduler: run the dossier whose next action is earliest; stop dossiers whose next action is in the future.
@@ -839,7 +907,7 @@ async function extras(w: World, now: Date) {
     const visits = await as['sef.sm']!.call('POST', `/sampling/${plan.id}/visits`, undefined, true);
     for (const [i, v] of (visits?.created ?? []).slice(0, 2).entries()) {
       const [place] = VISIT_PLACES[(i + 2) % VISIT_PLACES.length]!;
-      await as['sef.sm']!.fields(v.visitId, 'planning', { planned_date: new Date(now.getTime() + (3 + i * 4) * 86_400_000).toISOString().slice(0, 10), location: place, beneficiary_contact: 'administratorul societății' });
+      await as['sef.sm']!.fields(v.visitId, 'planning', { planned_date: new Date(now.getTime() + (3 + i * 4) * 86_400_000).toISOString().slice(0, 10), location: place, beneficiary_contact: 'administratorul societății', project_kind: 'echipamente', visit_scope: 'Verificarea existenței și funcționării bunurilor decontate.' });
       await as['sef.sm']!.go(v.visitId, 'planning', 'schedule');
     }
   }

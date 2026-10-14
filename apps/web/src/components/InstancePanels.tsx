@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useState, type FormEvent } from 'react';
 import { api } from '../api';
 import { fmtDate, fmtDateTime } from '../format';
 import { Badge, Card, Empty, ErrorAlert, Loading, useMe } from './ui';
@@ -33,7 +33,9 @@ export function ChecklistPanel({ instanceId, checklist, task }: { instanceId: st
     setDirty(true);
     setAnswers((a) => ({ ...a, [code]: { ...a[code]!, ...patch } }));
   };
-  const answered = Object.values(answers).filter((a) => a.answer).length;
+  // Points that do not concern this dossier (another kind of visit or investment) are not shown.
+  const items: any[] = checklist.items.filter((i: any) => i.applies !== false);
+  const answered = items.filter((i) => answers[i.code]?.answer).length;
   const otherRoles = ['primary', 'second'].filter((r) => r !== verifier && checklist.items.some((i: any) => i.responses[r]));
 
   return (
@@ -43,7 +45,7 @@ export function ChecklistPanel({ instanceId, checklist, task }: { instanceId: st
         verifier && (
           <>
             <span className="muted small">
-              {answered}/{checklist.items.length} completate
+              {answered}/{items.length} completate
             </span>
             <button className="primary small" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
               {save.isPending ? 'Se salvează…' : 'Salvează lista'}
@@ -69,15 +71,23 @@ export function ChecklistPanel({ instanceId, checklist, task }: { instanceId: st
             </tr>
           </thead>
           <tbody>
-            {checklist.items.map((item: any) => {
+            {items.map((item: any, idx: number) => {
               const a = answers[item.code]!;
+              const heading = item.section && item.section !== items[idx - 1]?.section;
               const needsObs = a.answer && item.observationRequiredOn.includes(a.answer);
               const ro = item.responses[verifier ?? 'primary'];
               return (
-                <tr key={item.code}>
+                <Fragment key={item.code}>
+                {heading && (
+                  <tr className="section-row">
+                    <th colSpan={4 + otherRoles.length}>{item.section}</th>
+                  </tr>
+                )}
+                <tr>
                   <td>{item.code}</td>
                   <td>
                     {item.question}
+                    {item.hint && <div className="muted small">{item.hint}</div>}
                     {item.legalBasis && <div className="muted small">Temei: {item.legalBasis}</div>}
                   </td>
                   <td>
@@ -118,6 +128,7 @@ export function ChecklistPanel({ instanceId, checklist, task }: { instanceId: st
                     </td>
                   ))}
                 </tr>
+                </Fragment>
               );
             })}
           </tbody>

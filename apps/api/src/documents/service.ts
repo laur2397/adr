@@ -1,4 +1,4 @@
-import type { FieldDef, ProcessDefinition } from '@flux/process-schema';
+import { truthy, type FieldDef, type ProcessDefinition } from '@flux/process-schema';
 import { formatAmount, formatDate } from '@flux/validators';
 import { audit, type AuditActor } from '../audit/audit.js';
 import { today } from '../core/config.js';
@@ -93,7 +93,7 @@ export async function templateData(db: Db, ctx: InstanceContext): Promise<Record
     } else if (f.type === 'line_items') {
       display[f.key] = ((v as Record<string, unknown>[] | undefined) ?? []).map((row, i) => {
         const r: Record<string, unknown> = { nr: i + 1 };
-        for (const c of f.columns ?? []) r[c.key] = formatValue(c, row[c.key]);
+        for (const c of f.columns ?? []) r[c.key] = c.type === 'choice' ? (row[c.key] ? label(c.nomenclature, row[c.key]) : '') : c.type === 'percent' && row[c.key] !== null && row[c.key] !== undefined ? `${String(row[c.key]).replace('.', ',')}%` : formatValue(c, row[c.key]);
         return r;
       });
     } else {
@@ -117,12 +117,19 @@ export async function templateData(db: Db, ctx: InstanceContext): Promise<Record
   for (const h of holders) if (!people.some((p) => p.step_key === h.step_key)) people.push(h);
   const checklist = await query(
     db,
-    `select ci.position, ci.code, ci.question, ci.legal_basis, r.answer, r.observation, r.verifier_role
+    `select ic.checklist_key, ci.position, ci.code, ci.question, ci.legal_basis, ci.section, ci.applies_when, r.answer, r.observation, r.verifier_role
        from instance_checklist ic join checklist_item ci on ci.template_id = ic.template_id
        left join checklist_response r on r.instance_id = ic.instance_id and r.item_id = ci.id
       where ic.instance_id = $1 order by ic.checklist_key, ci.position, r.verifier_role`,
     [ctx.instance.id],
   );
+  const ruleData = { fields: values, project: ctx.project };
+  const ANSWER: Record<string, string> = { DA: 'Da', NU: 'Nu', NA: 'N/A', DA_CU_OBS: 'Da, cu observații' };
+  // Items that do not apply to this dossier (another kind of visit or project) are left out.
+  const shownChecklist: Array<Record<string, any>> = checklist
+    .filter((c) => c.verifier_role === 'primary' || c.verifier_role === null)
+    .filter((c) => c.applies_when === null || truthy(c.applies_when, ruleData))
+    .map(({ applies_when: _a, ...c }) => ({ ...c, answer: c.answer ?? '', answer_label: c.answer ? (ANSWER[c.answer] ?? c.answer) : '', observation: c.observation ?? '', legal_basis: c.legal_basis ?? '' }));
   const registrations = await entriesForInstance(db, ctx.instance.id);
   const organization = await maybeOne(db, `select name, cui from organization where id = $1`, [ctx.instance.organization_id]);
   return {
@@ -141,9 +148,19 @@ export async function templateData(db: Db, ctx: InstanceContext): Promise<Record
       : {},
     beneficiary: ctx.beneficiary ?? {},
     people: Object.fromEntries(people.map((p) => [p.step_key, { name: p.full_name, job_title: p.job_title ?? '' }])),
-    checklist: checklist
-      .filter((c) => c.verifier_role === 'primary' || c.verifier_role === null)
-      .map((c) => ({ ...c, answer: c.answer ?? '', observation: c.observation ?? '', legal_basis: c.legal_basis ?? '' })),
+    checklist: shownChecklist,
+    // Per checklist, items grouped by section: {#checklists.onsite}{title}{#items}…{/items}{/checklists.onsite}
+    checklists: Object.fromEntries(
+      [...new Set(shownChecklist.map((c) => c.checklist_key as string))].map((key) => {
+        const sections: Array<{ title: string; items: typeof shownChecklist }> = [];
+        for (const c of shownChecklist.filter((x) => x.checklist_key === key)) {
+          const title = (c.section as string | null) ?? '';
+          if (sections.at(-1)?.title !== title) sections.push({ title, items: [] });
+          sections.at(-1)!.items.push(c);
+        }
+        return [key, sections];
+      }),
+    ),
     registrations: registrations.map((r) => ({ ...r, registered_at: formatDate(new Date(r.registered_at).toISOString().slice(0, 10)) })),
     registration_in: registrations.find((r) => r.direction === 'in')?.number_display ?? '',
   };

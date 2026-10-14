@@ -114,7 +114,7 @@ export function LineItems({
                     const v = c.type === 'calculated' && dirty ? null : r[c.key];
                     return (
                       <td key={c.key} className={c.type === 'amount' || c.type === 'calculated' ? 'num' : ''}>
-                        {c.type === 'calculated' && dirty ? <span className="muted small">după salvare</span> : displayValue(c.type, v, c.resultType ?? 'amount', options.data?.items)}
+                        {c.type === 'calculated' && dirty ? <span className="muted small">după salvare</span> : c.type === 'amount' && c.currency === false ? (v === null || v === undefined || v === '' ? '—' : fmtAmount(v)) : displayValue(c.type, v, c.resultType ?? 'amount', options.data?.items)}
                       </td>
                     );
                   }

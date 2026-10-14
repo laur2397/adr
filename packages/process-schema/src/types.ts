@@ -37,6 +37,8 @@ export interface ColumnDef {
   /** Result type of a calculated column (defaults to amount). */
   resultType?: 'amount' | 'integer' | 'percent' | 'text';
   total?: boolean;
+  /** Amount column holding a quantity: shown without the currency. */
+  currency?: boolean;
 }
 
 export type PrefillSource = 'project' | 'beneficiary' | 'anaf' | 'previous_instance' | 'register_entry' | 'constant';

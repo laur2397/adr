@@ -84,12 +84,13 @@ export async function visitRoutes(app: FastifyInstance) {
       const r = await one(
         db,
         `insert into visit_evidence (organization_id, instance_id, kind, storage_key, sha256, mime_type, size_bytes, width, height, caption, signer_name,
-                                     taken_at, latitude, longitude, accuracy_m, client_id, captured_by, step_key)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) returning id`,
+                                     taken_at, latitude, longitude, accuracy_m, client_id, captured_by, step_key, section)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) returning id`,
         [
           user.organizationId, req.params.id, kind, stored.storageKey, stored.sha256, info.mime, stored.size, info.width, info.height,
           field('caption')?.trim().slice(0, 300) || null, field('signerName')?.trim().slice(0, 200) || null,
           takenAt, lat, lon, num(field('accuracy')), clientId, user.id, task.step_key,
+          kind === 'photo' ? field('section')?.trim().slice(0, 120) || null : null,
         ],
       );
       await audit(db, actorOf(user), {
@@ -137,7 +138,7 @@ export async function visitRoutes(app: FastifyInstance) {
                 where t.instance_id = i.id and t.step_key = 'visit' order by t.created_at desc limit 1) as inspector,
               (select count(*) from visit_evidence e where e.instance_id = i.id and e.kind = 'photo' and e.deleted_at is null)::int as photos,
               (select bool_or(e.kind = 'signature') from visit_evidence e where e.instance_id = i.id and e.deleted_at is null) as signed,
-              (select exists (select 1 from task t where t.instance_id = i.id and t.status = 'open' and t.step_key = 'visit'
+              (select exists (select 1 from task t where t.instance_id = i.id and t.status = 'open' and t.step_key in ('prepare', 'visit')
                  and (t.assignee_user_id = $1 or t.assignee_user_id = any($4::uuid[])))) as mine
          from instance i join process_definition d on d.id = i.definition_id
          left join project p on p.id = i.project_id left join beneficiary b on b.id = i.beneficiary_id
@@ -154,6 +155,64 @@ export async function visitRoutes(app: FastifyInstance) {
     );
     const label = (key: string, code: string | null) => (code ? (labels.find((l) => l.key === key && l.code === code)?.label ?? code) : null);
     return { items: rows.map((r) => ({ ...r, visit_reason_label: label('visit_reason', r.visit_reason), result_label: label('visit_result', r.result) })) };
+  });
+
+  /**
+   * What the inspector needs from earlier visits to the same project: the recommendations to
+   * check (point 5 of the report) and the photos, to take the new ones from the same angles.
+   */
+  app.get<{ Params: { id: string } }>('/instances/:id/visit-context', async (req) => {
+    const user = userOf(req);
+    const pool = getPool();
+    await requireView(pool, user, req.params.id);
+    const ctx = await loadInstance(pool, req.params.id);
+    if (ctx.def.key !== VISIT_PROCESS) throw notFound('Vizita');
+    const previous = ctx.project
+      ? await query(
+          pool,
+          `select i.id, i.reference_no, i.status, i.started_at,
+                  (select f.value #>> '{}' from instance_field f where f.instance_id = i.id and f.field_key = 'visit_date') as visit_date,
+                  (select f.value #>> '{}' from instance_field f where f.instance_id = i.id and f.field_key = 'result') as result,
+                  (select f.value #>> '{}' from instance_field f where f.instance_id = i.id and f.field_key = 'visit_reason') as visit_reason,
+                  (select u.full_name from task t join app_user u on u.id = coalesce(t.on_behalf_of, t.completed_by) where t.instance_id = i.id and t.step_key = 'visit' and t.status = 'completed' order by t.completed_at desc limit 1) as inspector,
+                  (select coalesce(jsonb_agg(r.values order by r.position), '[]') from instance_list_row r where r.instance_id = i.id and r.list_key = 'recommendations') as recommendations
+             from instance i join process_definition d on d.id = i.definition_id
+            where d.key = $1 and i.organization_id = $2 and i.project_id = $3 and i.id <> $4 and i.started_at < $5
+              and exists (select 1 from instance_field f where f.instance_id = i.id and f.field_key = 'visit_date')
+            order by i.started_at desc limit 3`,
+          [VISIT_PROCESS, ctx.instance.organization_id, ctx.project.id, ctx.instance.id, ctx.instance.started_at],
+        )
+      : [];
+    const labels = await query(
+      pool,
+      `select n.key, i.code, i.label from nomenclature n join nomenclature_item i on i.nomenclature_id = n.id where n.organization_id = $1 and n.key in ('visit_reason', 'visit_result')`,
+      [ctx.instance.organization_id],
+    );
+    const label = (key: string, code: string | null) => (code ? (labels.find((l) => l.key === key && l.code === code)?.label ?? code) : null);
+    const out = [];
+    for (const p of previous) {
+      const photos = (await listEvidence(pool, p.id)).filter((e) => e.kind === 'photo');
+      out.push({
+        ...p,
+        result_label: label('visit_result', p.result),
+        visit_reason_label: label('visit_reason', p.visit_reason),
+        photos: photos.map(({ storage_key: _k, ...e }) => ({ ...e, url: `/api/v1/instances/${p.id}/evidence/${e.id}/content` })),
+      });
+    }
+    return {
+      project: ctx.project
+        ? {
+            smis_code: ctx.project.smis_code,
+            contract_number: ctx.project.contract_number,
+            contract_date: ctx.project.contract_date,
+            total_value: ctx.project.total_value,
+            eligible_value: ctx.project.eligible_value,
+            start_date: ctx.project.start_date,
+            end_date: ctx.project.end_date,
+          }
+        : null,
+      previous: out,
+    };
   });
 
   /** Opens a P8 dossier for every selected item of a sampling plan that has none yet. */

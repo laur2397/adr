@@ -16,7 +16,7 @@ import { maybeOne, one, query, type Db } from '../core/db.js';
 import { AppError, forbidden, notFound, unprocessable } from '../core/errors.js';
 import { enqueue } from '../core/outbox.js';
 import { pauseDeadline, resumeDeadline, startDeadline, stopDeadline, cancelDeadlines } from '../deadlines/service.js';
-import { loadFields, refreshCalculated, saveField } from '../forms/store.js';
+import { loadFields, refreshCalculated, saveField, saveList } from '../forms/store.js';
 import { actorOf, type CurrentUser } from '../identity/context.js';
 import { notifyUsers, usersWithRole } from '../notifications/service.js';
 import { createEntry, lastEntryForInstance, upsertCorrespondent } from '../registry/service.js';
@@ -624,6 +624,14 @@ export async function startInstance(db: Db, user: CurrentUser, input: StartInput
       value = p.value;
       source = 'calculated';
     }
+    if (f.type === 'line_items') {
+      // Tables: rows copied (only the columns this table has), e.g. the last visit's recommendations.
+      if (Array.isArray(value) && value.length) {
+        const keys = (f.columns ?? []).filter((c) => c.type !== 'calculated').map((c) => c.key);
+        await saveList(db, inst.id, f.key, (value as Record<string, unknown>[]).map((r) => Object.fromEntries(keys.map((k) => [k, r?.[k] ?? null]))), user.id);
+      }
+      continue;
+    }
     if (value !== undefined && value !== null) await saveField(db, inst.id, f.key, value, source, user.id, sourceAt);
   }
   for (const [k, v] of Object.entries(input.fields ?? {})) {
@@ -654,15 +662,17 @@ export interface TransitionInput {
   assignTo?: string | null;
 }
 
-async function checklistErrors(db: Db, instanceId: string, checklistKey: string, verifier: string) {
-  const rows = await query(
+async function checklistErrors(db: Db, instanceId: string, checklistKey: string, verifier: string, data: unknown) {
+  const all = await query(
     db,
-    `select ci.code, ci.position, ci.observation_required_on, r.answer, r.observation
+    `select ci.code, ci.position, ci.observation_required_on, ci.applies_when, r.answer, r.observation
        from instance_checklist ic join checklist_item ci on ci.template_id = ic.template_id
        left join checklist_response r on r.instance_id = ic.instance_id and r.item_id = ci.id and r.verifier_role = $3
       where ic.instance_id = $1 and ic.checklist_key = $2 order by ci.position`,
     [instanceId, checklistKey, verifier],
   );
+  // Items that do not apply to this visit (e.g. ex-post questions on an implementation visit) need no answer.
+  const rows = all.filter((r) => r.applies_when === null || truthy(r.applies_when, data));
   const errors: Array<{ field: string; message: string }> = [];
   for (const r of rows) {
     if (!r.answer) errors.push({ field: `checklist.${r.code}`, message: `Lista de verificare: punctul ${r.code} nu are răspuns.` });
@@ -732,7 +742,7 @@ export async function transition(db: Db, user: CurrentUser, input: TransitionInp
     if (path.validateFields !== false) errors.push(...validateForStep(ctx.def, step.key, data));
     for (const v of path.validations ?? []) if (!truthy(v.rule, data)) errors.push({ message: v.message });
     if (path.requiresChecklistComplete) {
-      errors.push(...(await checklistErrors(db, ctx.instance.id, path.requiresChecklistComplete, step.checklistVerifier ?? 'primary')));
+      errors.push(...(await checklistErrors(db, ctx.instance.id, path.requiresChecklistComplete, step.checklistVerifier ?? 'primary', data)));
     }
     for (const docKey of path.requiresSignatures ?? []) {
       const signed = await maybeOne(

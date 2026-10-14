@@ -293,8 +293,10 @@ Eliminarea cere decizia comisiei de selecționare și avizul Arhivelor Național
 
 ## 9. Vizite pe teren
 
-Verificările la fața locului (art. 74 alin. 2 din Regulamentul (UE) 2021/1060) au un circuit
-propriu, P8, și o pagină făcută pentru telefon sau tabletă, care funcționează și fără semnal.
+Vizita pe teren a ofițerului de monitorizare (art. 74 din Regulamentul (UE) 2021/1060, art. 14 din
+OUG 23/2023, Anexa 6 la Ordinul MIPE 1777/2023) are un circuit propriu, P8, și o pagină făcută pentru
+telefon sau tabletă, organizată pe cele patru etape ale vizitei — **pregătesc, verific, raportez,
+urmăresc** — care funcționează și fără semnal.
 
 ### 9.1. De la eșantion la vizite programate
 
@@ -306,32 +308,56 @@ la cerere, din Dosar nou.
 
 <figure><img src="img/71-esantionare-vizite.png"><figcaption>Figura 43. Planul de eșantionare cu vizitele deschise: fiecare dosar selectat are acum o vizită, cu stadiul ei („Programarea vizitei”, „Vizita la fața locului” etc.).</figcaption></figure>
 
-La programare se completează data, adresa locului de implementare și persoana de contact. Cu
-„Programează și notifică beneficiarul”, aplicația generează notificarea, o înregistrează la ieșire,
-o trimite pe e-mail și alocă numărul din Registrul verificărilor la fața locului.
+La programare se alege **tipul vizitei** (planificată, din eșantion, de monitorizare, ad-hoc /
+inopinată, încrucișată, la cererea finală sau ex-post) și **tipul investiției** (lucrări, echipamente,
+servicii, eficiență energetică) — ele comandă ce puncte și secțiuni se vor afișa — și se completează
+scopul, data, adresa și persoana de contact. La vizitele cu notificare, aplicația generează
+notificarea, o înregistrează la ieșire, o trimite pe e-mail și alocă numărul din Registrul
+verificărilor la fața locului; vizitele inopinate (ad-hoc și pe suspiciune) sar peste notificare.
 
 ### 9.2. Lista vizitelor
 
 <figure><img src="img/70-vizite-lista.png"><figcaption>Figura 44. Vizite pe teren: data programată sau efectuată, beneficiarul, locul, inspectorul, stadiul, numărul de fotografii, semnătura și rezultatul, cu indicatori pentru vizitele în curs, efectuate luna aceasta, cu recomandări și neconforme. Expertul vede butonul „Pe teren” la vizitele sale.</figcaption></figure>
 
-### 9.3. Pe telefon, la beneficiar
+### 9.3. Pe telefon, la beneficiar: cele patru etape
 
 Expertul deschide vizita de pe telefon (Vizite pe teren → „Pe teren”, sau butonul „Deschide modul
-de teren” din dosar). Pagina se poate adăuga pe ecranul telefonului, ca o aplicație.
+de teren” din dosar). Pagina se poate adăuga pe ecranul telefonului, ca o aplicație, și are patru
+file: **1 · Pregătesc, 2 · Verific, 3 · Raportez** și un **Ghid**.
 
-<figure><img src="img/72-telefon-pornire.png"><figcaption>Figura 45. Pe telefon: lista vizitelor; declarația privind conflictul de interese și preluarea vizitei; apoi lucrul fără semnal (eticheta „fără semnal”, modificările rămân pe dispozitiv și se trimit când revine semnalul).</figcaption></figure>
+<figure><img src="img/72-telefon-pornire.png"><figcaption>Figura 45. Pe telefon, fila „Pregătesc”: declarația privind conflictul de interese și preluarea vizitei, detaliile vizitei, echipa de verificare, „ce urmăresc”, lista echipamentelor, recomandările vizitei anterioare și lista de pregătire.</figcaption></figure>
 
-Ce face expertul la fața locului:
+**1 · Pregătesc** (regula de aur: ce ar trebui să văd / ce a declarat beneficiarul / unde este
+riscul cel mai mare): echipa de verificare (ofițer de monitorizare, expert achiziții, ofițer
+autorizare plăți), ce a declarat beneficiarul în ultimul raport de progres, indicatorii de etapă
+scadenți, riscul principal, **lista echipamentelor** (denumire, cantitate, serie din factură,
+amplasare) și a pozițiilor de măsurat, recomandările și fotografiile vizitei anterioare, și o listă
+de pregătire. Butonul **„Plec pe teren”** descarcă tot pe dispozitiv, pentru lucru fără semnal.
 
-- **lista de verificare** (12 puncte), cu butoane mari Da / Nu / N/A; observația devine
-  obligatorie unde lista o cere (de exemplu la un „Nu”);
-- **fotografii** direct din cameră sau din galerie, cu o descriere. Fiecare fotografie primește
-  ora și **poziția GPS** a telefonului și este micșorată pe dispozitiv, ca să se trimită repede;
-- **constatările**, rezultatul (conform / conform cu recomandări / neconform), recomandările și
-  termenul lor;
-- **semnătura reprezentantului beneficiarului**, desenată pe ecran cu degetul, cu numele lui.
+**2 · Verific** — lista de verificare este structurată pe **secțiunile Anexei 6** (modificări de
+contract, achiziții, stadiu, indicatori, echipamente, lucrări, livrabile, indicatori de etapă,
+plăți, durabilitate, management, principii orizontale, vizibilitate, încheiere). Se afișează doar
+secțiunile și punctele care privesc tipul vizitei și al investiției (de exemplu durabilitatea doar la
+ex-post, autorizația de construire doar la lucrări). Fiecare secțiune are:
 
-<figure><img src="img/73-telefon-lucru.png"><figcaption>Figura 46. Lista de verificare completată (punctul 9 cu „Nu” și observație), fotografiile cu ora și coordonatele GPS (marcate „pe dispozitiv” până la trimitere) și semnătura reprezentantului.</figcaption></figure>
+- butoane mari Da / Nu / N/A, cu îndrumare pe fiecare punct și observație obligatorie unde lista o
+  cere; un indicator de progres și un semn „NU” pe secțiune;
+- **tabelul de echipamente** cu constatarea pe butoane (găsit / serie diferită / nefuncțional / mutat
+  / lipsă) și fotografie per echipament; **tabelul de măsurători** care arată automat diferența în
+  procente între cantitatea decontată și cea măsurată;
+- o casetă de **constatări pe secțiune**;
+- fotografiile vizitei anterioare, cu butonul „același unghi”, ca să se refacă din aceeași poziție;
+- **fotografii** etichetate pe secțiune, direct din cameră sau din galerie, fiecare cu ora și
+  **poziția GPS** a telefonului, micșorate pe dispozitiv.
+
+<figure><img src="img/73-telefon-lucru.png"><figcaption>Figura 46. Fila „Verific”: lista de verificare pe secțiuni pliabile, tabelul de echipamente cu constatarea, măsurătorile cu diferența calculată și fotografiile etichetate pe secțiune, cu ora și coordonatele GPS.</figcaption></figure>
+
+**3 · Raportez**: documentele verificate și metoda (integral / eșantion), concluziile, natura
+abaterilor, rezultatul (conform / conform cu recomandări / neconform), nivelul de monitorizare
+propus, **recomandările** (fiecare concretă, cu termen și dovada cerută), **semnătura
+reprezentantului** desenată pe ecran, și o listă „ce mai lipsește” înainte de trimitere. Fila
+**Ghid** ține la îndemână memo-ul **S-A-E-V-F** (Stadiul, Actele, Echipamentele, Vizibilitatea,
+Finalul), situațiile dificile, etica, termenele și escaladarea.
 
 **Fără semnal:** totul se salvează pe telefon. Pagina se redeschide și fără semnal, cu toate
 datele introduse. Când revine semnalul, modificările se trimit singure, în ordine. Dacă serverul
@@ -339,12 +365,21 @@ refuză o modificare, aceasta rămâne afișată cu motivul și poate fi reînce
 
 <figure><img src="img/74-telefon-sincronizat.png" style="max-height: 150mm"><figcaption>Figura 47. Semnalul a revenit: „Totul este salvat pe server”. Butonul „Semnează raportul și trimite la avizare” generează raportul, îl semnează și îl trimite șefului de serviciu.</figcaption></figure>
 
-Raportul nu poate fi trimis fără cel puțin o fotografie, fără semnătura reprezentantului, cu lista
-de verificare incompletă sau fără recomandări și termen, atunci când rezultatul nu este „conform”.
+Raportul nu poate fi trimis fără cel puțin o fotografie și semnătura reprezentantului, cu lista de
+verificare (doar punctele aplicabile) incompletă, fără constatarea fiecărui echipament, fără metoda
+de verificare la fiecare document, fără constatările la secțiunea potrivită (stadiul la vizitele de
+implementare, durabilitatea la ex-post) sau fără recomandări cu termen și dovadă când rezultatul nu
+este „conform”. O întârziere nu este, în sine, neregulă: rezultatul „neconform” presupune o
+suspiciune de neregulă sau fraudă, semnalată ierarhic.
 
-### 9.4. Raportul, cu fotografiile în anexă
+### 9.4. Raportul, în structura Anexei 6, cu fotografiile în anexă
 
-<figure><img src="img/77-raport-vizita.png"><figcaption>Figura 48. Raportul de verificare la fața locului generat de aplicație (prima pagină și prima pagină a anexei): datele vizitei, lista de verificare, constatările, rezultatul și recomandările; în anexă fiecare fotografie cu data, ora, coordonatele GPS, autorul și amprenta, apoi semnătura reprezentantului.</figcaption></figure>
+Raportul se generează în structura Anexei 6: antet (program, SMIS, contract, tipul vizitei, echipa,
+participanții), lista de verificare pe secțiuni, constatările pe secțiunile I și II, tabelele
+(echipamente, măsurători, recomandări anterioare, recomandări noi, documente verificate),
+concluziile, natura abaterilor și nivelul de monitorizare, apoi anexa foto.
+
+<figure><img src="img/77-raport-vizita.png"><figcaption>Figura 48. Raportul de vizită pe teren generat de aplicație (prima pagină și prima pagină a anexei): antetul și echipa, lista de verificare pe secțiuni, constatările și recomandările; în anexă fiecare fotografie cu secțiunea, data, ora, coordonatele GPS, autorul și amprenta, apoi semnătura reprezentantului.</figcaption></figure>
 
 ### 9.5. În dosar: fotografii, semnătură, rezultat
 

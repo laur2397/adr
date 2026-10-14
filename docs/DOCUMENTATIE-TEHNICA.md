@@ -301,9 +301,14 @@ Proiect → Aviz șef compartiment → Aviz de legalitate → Semnare director �
 deciziei se alocă înainte de semnare și se păstrează la returnare.
 
 ### P8 – Verificare la fața locului
-Programare (din eșantion sau la cerere) → notificarea beneficiarului → vizita (listă de verificare,
-fotografii cu GPS, semnătura reprezentantului) → avizare șef → aprobare director → comunicare →
-încheiere, urmărirea recomandărilor sau sesizare automată P4. Detalii în secțiunea 13.
+Vizita pe teren a ofițerului de monitorizare, pe cele patru etape — **pregătesc, verific, raportez,
+urmăresc** — conform art. 74 din Regulamentul (UE) 2021/1060, art. 14 din OUG 23/2023 și Anexei 6 la
+Ordinul MIPE 1777/2023. Programare (tip de vizită, tip de investiție) → notificarea beneficiarului
+(sau fără notificare la vizitele inopinate) → pregătirea vizitei (echipă, dosar, echipamente,
+riscuri, listă de pregătire) → vizita (listă de verificare structurată pe secțiunile Anexei 6,
+constatări pe secțiuni, tabele de echipamente, măsurători și documente, fotografii cu GPS etichetate
+pe secțiuni, semnătura reprezentantului) → avizare șef → aprobare director → comunicare → încheiere,
+urmărirea recomandărilor sau sesizare automată P4. Detalii în secțiunea 13.
 
 Roluri folosite: `registry_inspector`, `evf_expert`, `ei_expert`, `procurement_expert`,
 `head_of_unit`, `director`, `cfpp`, `legal_advisor`, `irregularity_officer`, `accountant`,
@@ -395,64 +400,115 @@ auditul poate reproduce exact eșantionul. Metode: `risk_weighted`, `simple_rand
 
 ## 13. Verificări la fața locului și modulul de teren
 
-Pachetul P8 (`processes/p8`) și modulul `apps/api/src/visits/` acoperă verificările la fața locului
-cerute de art. 74 alin. 2 din Regulamentul (UE) 2021/1060, de la eșantion până la urmărirea
-recomandărilor.
+Pachetul P8 (`processes/p8`) și modulul `apps/api/src/visits/` acoperă vizita pe teren a ofițerului
+de monitorizare, cerută de art. 74 din Regulamentul (UE) 2021/1060, de art. 14 din OUG 23/2023 și
+structurată după Anexa 6 la Ordinul MIPE 1777/2023, de la eșantion până la urmărirea recomandărilor
+și escaladare. Fluxul urmează cele patru etape din practica ADR: **pregătesc → verific → raportez →
+urmăresc**.
 
-**Pornire.** Vizitele se deschid fie din planul de eșantionare (`POST /sampling/:id/visits`
-creează câte un dosar P8 pentru fiecare dosar selectat; tabelul `sampling_visit` împiedică
-dublarea), fie la cerere (Dosar nou → „Verificare la fața locului”). Motivul vizitei
-(`visit_reason`) se completează automat: eșantion – risc ridicat sau selecție aleatorie.
+**Tipuri de vizită** (`visit_reason`): planificată (plan anual pe bază de risc), din eșantion (risc
+ridicat / aleatorie), de monitorizare a activităților în derulare, ad-hoc / inopinată (fără
+notificare), încrucișată (dublă finanțare), la cererea de rambursare finală și ex-post
+(durabilitate). Tipul investiției (`project_kind`: lucrări, echipamente, servicii, eficiență
+energetică) și tipul vizitei comandă ce puncte și secțiuni se afișează.
 
-**Circuit.** Programarea vizitei (dată, loc, persoană de contact) → notificarea beneficiarului
-(document generat, înregistrat la ieșire și trimis pe e-mail; numărul din Registrul verificărilor
-la fața locului se alocă acum) → vizita (expertul de monitorizare: listă de verificare cu 12
-puncte, constatări, rezultat, recomandări, fotografii, semnătura reprezentantului) → avizare șef
-serviciu → aprobare director → comunicarea raportului → în funcție de rezultat: încheiere (conform),
-urmărirea recomandărilor cu termen (conform, cu recomandări) sau sesizare automată către nereguli
-(neconform: sub-flux P4, precompletat cu sursa „vizită la fața locului” și constatările). Dacă
-recomandările nu sunt implementate, din urmărire se poate sesiza la fel neregula. Cel care a
-efectuat vizita nu poate aviza raportul (separarea funcțiilor), iar pașii de vizită, avizare și
-aprobare cer declarația privind conflictul de interese.
+**Pornire.** Vizitele se deschid fie din planul de eșantionare (`POST /sampling/:id/visits` creează
+câte un dosar P8 pentru fiecare dosar selectat; tabelul `sampling_visit` împiedică dublarea), fie la
+cerere (Dosar nou → „Verificare la fața locului”).
 
-**Dovezi** (tabel `visit_evidence`): fotografii și semnătura reprezentantului, stocate în
-depozitul adresat după conținut, cu ora de pe dispozitiv (`taken_at`), poziția GPS (latitudine,
-longitudine, precizie), descrierea, autorul, pasul și amprenta SHA-256. Se acceptă doar JPEG și PNG,
-recunoscute după conținut (nu după tipul declarat), maximum 15 MB. Se pot adăuga numai de cel care
-are sarcina la pasul marcat `"evidence": true` și numai cât acesta este deschis. O semnătură nouă o
-înlocuiește pe cea veche; ștergerile sunt logice și auditate. Fiecare dispozitiv generează un
-`clientId` pentru fiecare fotografie, deci o retrimitere după o conexiune căzută nu creează dubluri.
+**Circuit.** Programare → decizie de notificare (vizitele ad-hoc și pe suspiciune sar peste
+notificare și merg direct la pregătire) → notificarea beneficiarului (document generat, înregistrat
+la ieșire și trimis pe e-mail; numărul din Registrul verificărilor la fața locului se alocă aici) →
+**pregătirea vizitei** (expertul de monitorizare: echipa de verificare, ce a declarat beneficiarul,
+indicatorii de etapă scadenți, riscul principal, lista echipamentelor și a pozițiilor de măsurat,
+lista de pregătire) → **vizita** (lista de verificare pe secțiunile Anexei 6, constatări pe secțiuni,
+tabelele de echipamente, măsurători, recomandări anterioare, participanți și documente, fotografii și
+semnătură) → avizare șef serviciu → aprobare director → comunicarea raportului → în funcție de
+rezultat: încheiere (conform), urmărirea recomandărilor cu termen (conform, cu recomandări; din
+urmărire se poate deschide o vizită nouă) sau sesizare automată către nereguli (neconform: sub-flux
+P4, precompletat cu sursa „vizită la fața locului” și constatările). Cel care a efectuat vizita nu
+poate aviza raportul (separarea funcțiilor), iar pașii de pregătire, vizită, avizare și aprobare cer
+declarația privind conflictul de interese.
 
-**Validări** la trimiterea raportului: cel puțin o fotografie (`evidence.photos >= 1`), semnătura
-reprezentantului (`evidence.signature`), lista de verificare completă, recomandări și termen când
-rezultatul nu este „conform”, raport semnat. Valorile `evidence.*` și `today` sunt disponibile în
-regulile oricărei definiții de proces.
+**Liste de verificare pe secțiuni** (migrarea `0006`, coloanele `section`, `hint`, `applies_when` pe
+`checklist_item`). Lista de pregătire (`p8_prepare`, 12 puncte) și lista vizitei (`p8_onsite`, pe
+secțiunile 1–14 ale Anexei 6) sunt grupate pe secțiuni, cu îndrumare pe punct. Fiecare punct poate
+avea o condiție `applies_when` (JSONLogic peste `fields` și `project`), deci punctele care nu privesc
+tipul vizitei sau al investiției (ex-post, lucrări, eficiență energetică, cerere finală, încrucișată)
+nu se afișează și nu se cer la trimitere. Motorul evaluează condiția la verificarea completitudinii
+(`checklistErrors`) și la randarea raportului.
 
-**Raportul** (`p8_visit_report`) are atributul `appendEvidence`: la generare, după completarea
-șablonului, `appendEvidenceAnnex` adaugă în DOCX o anexă cu fiecare fotografie (descriere, dată și
-oră, coordonate GPS, autor, început de amprentă) și cu semnătura reprezentantului. Anexa se face pe
-DOCX, deci are fonturile șablonului și apare și în PDF.
+**Tabele** (precompletate și copiate din dosarul anterior unde este cazul): echipa de verificare,
+participanții beneficiarului, echipamentele (denumire, cantitate, serie din factură, amplasare,
+constatare — găsit / serie diferită / nefuncțional / mutat / lipsă — și serie găsită), măsurătorile
+prin sondaj (cantitate decontată vs măsurată, cu diferența în procente calculată), recomandările
+vizitei anterioare cu stadiul lor (punctul 5, precompletate din vizita precedentă), documentele
+verificate cu metoda (integral / eșantion, punctul 13) și recomandările (concrete, cu termen și
+dovada cerută, punctul 12).
 
-**Modulul de teren** (`/teren/:id`, pentru telefon sau tabletă):
+**Context de vizită** (`GET /instances/:id/visit-context`): recomandările și fotografiile vizitelor
+anterioare ale aceluiași proiect, ca ofițerul să refacă fotografiile din aceleași unghiuri și să
+urmărească recomandările; pe teren, fotografiile anterioare se descarcă pe dispozitiv pentru
+comparare fără semnal.
 
-- listă de verificare cu butoane mari Da / Nu / N/A și observații (obligatorii unde cere lista);
-- fotografii direct din cameră sau din galerie, micșorate pe dispozitiv la maximum 1600 px (JPEG 0,82),
-  cu poziția GPS curentă (cea mai recentă poziție de cel mult 2 minute sau o citire nouă);
-- constatări, rezultat, recomandări, termen;
-- semnătura reprezentantului pe ecran (degetul sau creionul) și numele lui;
-- **funcționare fără semnal**: dosarul se păstrează în IndexedDB (`apps/web/src/offline.ts`), iar
-  fiecare modificare intră într-o coadă locală trimisă în ordine când revine conexiunea (automat la
-  evenimentul `online` și la 30 de secunde). O modificare refuzată de server rămâne vizibilă, cu
-  motivul, și poate fi reîncercată sau abandonată. Aplicația se deschide fără semnal prin service
-  worker (`apps/web/public/sw.js`: pagina din rețea când există, altfel copia locală; fișierele
-  construite din cache), iar utilizatorul curent este reținut local până la ieșirea din cont;
+**Dovezi** (tabel `visit_evidence`): fotografii și semnătura reprezentantului, stocate în depozitul
+adresat după conținut, cu ora de pe dispozitiv (`taken_at`), poziția GPS, descrierea, **secțiunea
+raportului** pe care o documentează (`section`), autorul, pasul și amprenta SHA-256. Se acceptă doar
+JPEG și PNG, recunoscute după conținut, maximum 15 MB. Se pot adăuga numai de cel care are sarcina la
+pasul marcat `"evidence": true` și numai cât acesta este deschis. O semnătură nouă o înlocuiește pe
+cea veche; ștergerile sunt logice și auditate. Fiecare dispozitiv generează un `clientId` pentru
+fiecare fotografie, deci o retrimitere după o conexiune căzută nu creează dubluri.
+
+**Validări** la trimiterea raportului: cel puțin o fotografie și semnătura reprezentantului, lista de
+verificare completă (doar punctele aplicabile), constatarea fiecărui echipament, stadiul fiecărei
+recomandări anterioare, metoda de verificare la fiecare document, participanții, constatările la
+secțiunea potrivită (stadiul activităților la vizitele de implementare, durabilitatea la ex-post),
+recomandări cu termen și dovadă când rezultatul nu este „conform”, și coerența neregulă/suspiciune
+(o întârziere nu este, în sine, neregulă: rezultatul „neconform” presupune o suspiciune de neregulă
+sau fraudă, iar o suspiciune presupune „neconform”). Valorile `evidence.*` și `today` sunt
+disponibile în regulile oricărei definiții de proces.
+
+**Raportul** (`p8_visit_report`, în structura Anexei 6) are atributul `appendEvidence`: antet
+(program, SMIS, contract, tip de vizită, echipă, participanți), lista de verificare pe secțiuni,
+constatările pe secțiunile I/II, tabelele (echipamente, măsurători, recomandări anterioare,
+recomandări, documente verificate), concluziile, natura abaterilor, nivelul de monitorizare și
+anexa foto. La generare, `appendEvidenceAnnex` adaugă în DOCX o anexă cu fiecare fotografie
+(secțiune, descriere, dată și oră, coordonate GPS, autor, început de amprentă) și semnătura. Anexa se
+face pe DOCX, deci are fonturile șablonului și apare și în PDF. Șabloanele și listele de verificare
+livrate de produs se **versionează**: la seed, un șablon built-in modificat se publică într-o
+versiune nouă (`source_hash`), dar un șablon încărcat de instituție nu se suprascrie, iar dosarele în
+lucru păstrează versiunea cu care au pornit.
+
+**Modulul de teren** (`/teren/:id`, pentru telefon sau tabletă), organizat pe filele **1 · Pregătesc,
+2 · Verific, 3 · Raportez** și un **Ghid**:
+
+- la Pregătesc: detaliile vizitei, echipa, ce urmăresc, lista echipamentelor și a pozițiilor de
+  măsurat, recomandările și fotografiile vizitei anterioare, lista de pregătire, și butonul „Plec pe
+  teren” care descarcă tot pe dispozitiv;
+- la Verific: deschiderea vizitei și participanții, lista de verificare pe secțiuni pliabile (butoane
+  mari Da / Nu / N/A, îndrumare pe punct, indicator de progres și de „NU” pe secțiune), tabelele de
+  echipamente (cu constatare pe butoane și fotografie per echipament) și de măsurători (cu diferența
+  calculată), constatările pe secțiune, fotografiile anterioare „din același unghi” și fotografiile
+  etichetate pe secțiune;
+- la Raportez: documentele și metoda, concluziile, natura abaterilor, rezultatul, nivelul de
+  monitorizare, recomandările (cu termen și dovadă), semnătura reprezentantului pe ecran și o listă
+  „ce mai lipsește” înainte de trimitere;
+- la Ghid: memo-ul **S-A-E-V-F**, situațiile dificile, etica, termenele (3-30-10, ≥10 zile, 5+5 zile,
+  5 ani) și escaladarea (sprijin → monitorizare consolidată → măsuri corective → reziliere);
+- **funcționare fără semnal**: dosarul, listele de cod și fotografiile vizitei anterioare se păstrează
+  în IndexedDB (`apps/web/src/offline.ts`), iar fiecare modificare (câmpuri, tabele, listă de
+  verificare, fotografii, semnătură) intră într-o coadă locală trimisă în ordine când revine
+  conexiunea (automat la evenimentul `online` și la 30 de secunde). O modificare refuzată de server
+  rămâne vizibilă, cu motivul, și poate fi reîncercată sau abandonată. Aplicația se deschide fără
+  semnal prin service worker (`apps/web/public/sw.js`), iar utilizatorul curent este reținut local
+  până la ieșirea din cont;
 - semnarea raportului și trimiterea la avizare, când există semnal.
 
 Aplicația se poate instala pe ecranul telefonului (manifest web, `display: standalone`).
 
-**Evidență**: pagina Vizite pe teren (`/vizite`, `GET /visits`) listează vizitele cu data
-programată sau efectuată, beneficiarul, locul, inspectorul, stadiul, numărul de fotografii, semnătura
-și rezultatul, cu indicatori (în curs, efectuate luna aceasta, cu recomandări, neconforme). În dosar,
+**Evidență**: pagina Vizite pe teren (`/vizite`, `GET /visits`) listează vizitele cu data programată
+sau efectuată, beneficiarul, locul, inspectorul, stadiul, numărul de fotografii, semnătura și
+rezultatul, cu indicatori (în curs, efectuate luna aceasta, cu recomandări, neconforme). În dosar,
 fila „Fotografii și semnătură” arată galeria, cu legături la hartă pentru fiecare poziție GPS.
 
 ## 14. Nereguli și debitori
